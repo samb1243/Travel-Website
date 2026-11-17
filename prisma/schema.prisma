@@ -1,0 +1,201 @@
+// TripStack database schema.
+//
+// Conventions
+// - Money is Decimal(14,2) in the trip's currency. An item's cost is the total
+//   for the whole group, not per person.
+// - Item.startAt / endAt are local "wall clock" times at the place they happen
+//   (e.g. a 07:40 departure in Bangkok). They're stored as timestamps without a
+//   time zone and always formatted as UTC, so they never shift.
+// - Trip.durationDays / countryCodes / totalCost are summary fields recalculated
+//   on every write (src/server/trip-summary.ts) so Explore can filter in SQL.
+// - ItemStatus NOT_NEEDED means "no booking needed" (walk-in, free, already
+//   owned). Its cost still counts toward the budget.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TripType {
+  BACKPACKING
+  MULTI_CITY
+  HIKING
+  OTHER
+}
+
+enum Visibility {
+  PRIVATE
+  UNLISTED
+  PUBLIC
+}
+
+enum ItemCategory {
+  FLIGHT
+  ACCOMMODATION
+  TRANSPORT
+  ACTIVITY
+  FOOD
+  GEAR
+  OTHER
+}
+
+enum ItemStatus {
+  BOOKED
+  PAY_ON_ARRIVAL
+  TO_BOOK
+  NOT_NEEDED
+}
+
+enum LinkKind {
+  BOOKING
+  CONFIRMATION // personal: hidden on shared views, removed when a trip is copied
+  MAP
+  INFO
+  OTHER
+}
+
+// Field names follow Better Auth's core user table so step 3 only adds tables.
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  homeCurrency  String   @default("EUR") @db.Char(3)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  trips      Trip[]
+  savedTrips SavedTrip[]
+}
+
+model Trip {
+  id            String     @id @default(cuid())
+  ownerId       String
+  owner         User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  /// Unguessable, used in share links: /t/<slug>
+  slug          String     @unique
+  title         String
+  type          TripType   @default(OTHER)
+  description   String?
+  coverImageUrl String?
+  startDate     DateTime?  @db.Date
+  endDate       DateTime?  @db.Date
+  visibility    Visibility @default(PRIVATE)
+  currency      String     @default("EUR") @db.Char(3)
+  budget        Decimal?   @db.Decimal(14, 2)
+  travellers    Int        @default(1)
+
+  // Attribution when this trip was copied from someone else's.
+  copiedFromTripId String?
+  copiedFrom       Trip?   @relation("TripCopies", fields: [copiedFromTripId], references: [id], onDelete: SetNull)
+  copies           Trip[]  @relation("TripCopies")
+  /// Snapshots so the credit survives if the original is deleted or renamed
+  copiedFromTitle  String?
+  copiedFromAuthor String?
+
+  // Summary fields (see header comment)
+  durationDays Int?
+  countryCodes String[]
+  totalCost    Decimal  @default(0) @db.Decimal(14, 2)
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  stops   Stop[]
+  items   Item[]
+  savedBy SavedTrip[]
+
+  @@index([ownerId, updatedAt])
+  @@index([visibility, publishedAt])
+}
+
+model Stop {
+  id          String    @id @default(cuid())
+  tripId      String
+  trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  position    Int
+  name        String
+  region      String?
+  country     String?
+  countryCode String?   @db.Char(2)
+  /// Stable place id from the geocoder, e.g. "osm:relation:5326784".
+  /// Lets Phase 2 recommendations match the same place across trips.
+  placeId     String?
+  lat         Float?
+  lng         Float?
+  arriveOn    DateTime? @db.Date
+  departOn    DateTime? @db.Date
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  items Item[]
+
+  @@index([tripId, position])
+  @@index([placeId])
+}
+
+model Item {
+  id               String       @id @default(cuid())
+  tripId           String
+  trip             Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  /// Null = trip-wide item (e.g. travel insurance, a rail pass)
+  stopId           String?
+  stop             Stop?        @relation(fields: [stopId], references: [id], onDelete: SetNull)
+  position         Int          @default(0)
+  category         ItemCategory
+  title            String
+  provider         String?
+  startAt          DateTime?    @db.Timestamp(0)
+  endAt            DateTime?    @db.Timestamp(0)
+  /// When true only the dates of startAt/endAt matter (e.g. a full-day hike)
+  allDay           Boolean      @default(false)
+  fromPlace        String?
+  toPlace          String?
+  cost             Decimal?     @db.Decimal(14, 2)
+  /// Reserved for Phase 2 multi-currency; null means the trip currency
+  currency         String?      @db.Char(3)
+  status           ItemStatus   @default(TO_BOOK)
+  /// Personal: hidden on shared views, removed when a trip is copied
+  confirmationCode String?
+  /// Shared with anyone who can see the trip
+  notes            String?
+  /// Personal: hidden on shared views, removed when a trip is copied
+  privateNotes     String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  links ItemLink[]
+
+  @@index([tripId, status])
+  @@index([stopId])
+}
+
+model ItemLink {
+  id       String   @id @default(cuid())
+  itemId   String
+  item     Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  kind     LinkKind @default(OTHER)
+  label    String?
+  url      String
+  position Int      @default(0)
+
+  @@index([itemId])
+}
+
+model SavedTrip {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, tripId])
+  @@index([tripId])
+}
