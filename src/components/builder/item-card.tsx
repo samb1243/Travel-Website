@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ArrowRightIcon, CheckIcon, CopyIcon, LockIcon } from "lucide-react";
 import { CATEGORY_META, LINK_KIND_META, linkButtonLabel } from "@/lib/item-categories";
 import { formatItemWhen } from "@/lib/format";
-import { formatMoney } from "@/lib/money";
+import { formatPrice } from "@/lib/money";
 import { STATUS_META } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { Tappable } from "@/components/tappable";
@@ -42,7 +42,7 @@ export function ItemCard({
           <span className="flex items-start justify-between gap-2">
             <span className="font-medium text-pretty">{item.title}</span>
             {item.cost !== null ? (
-              <span className="shrink-0 text-sm font-medium tabular-nums">{formatMoney(item.cost, currency)}</span>
+              <span className="shrink-0 text-sm font-medium tabular-nums">{formatPrice(item.cost, currency)}</span>
             ) : null}
           </span>
           {showRoute ? (

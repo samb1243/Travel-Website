@@ -2,8 +2,6 @@ import Link from "next/link";
 import { CheckCircle2Icon, CopyIcon, MapIcon, WalletIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WindowView } from "@/components/window-view";
-import { ITEM_STATUSES, STATUS_META } from "@/lib/status";
-import { cn } from "@/lib/utils";
 
 const FEATURES = [
   {
@@ -48,16 +46,6 @@ export default function HomePage() {
               <Link href="/explore">Explore trips</Link>
             </Button>
           </div>
-          <ul className="flex flex-wrap gap-2" aria-label="Booking statuses">
-            {ITEM_STATUSES.map((s) => (
-              <li
-                key={s}
-                className={cn("rounded-full border px-3 py-1 text-sm font-medium", STATUS_META[s].badge)}
-              >
-                <span aria-hidden>{STATUS_META[s].emoji}</span> {STATUS_META[s].label}
-              </li>
-            ))}
-          </ul>
         </div>
         <WindowView className="mx-auto hidden max-w-[280px] drop-shadow-xl md:block" />
       </section>

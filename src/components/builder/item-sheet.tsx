@@ -80,6 +80,8 @@ function ItemForm({
   const item = state.mode === "edit" ? state.item : null;
   const [category, setCategory] = useState<ItemCategory>(item?.category ?? (state.mode === "add" ? state.category : undefined) ?? "ACTIVITY");
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? "TO_BOOK");
+  // Free = a price of 0. An empty price means "not priced yet", which the budget treats differently.
+  const [free, setFree] = useState(item?.cost === 0);
   const [links, setLinks] = useState<LinkRow[]>(
     item?.links.map((l) => ({ key: l.id, kind: l.kind, label: l.label ?? "", url: l.url })) ?? [],
   );
@@ -106,7 +108,7 @@ function ItemForm({
       endTime: meta.fields.end ? get("endTime") : "",
       fromPlace: meta.fields.route ? get("fromPlace") : "",
       toPlace: meta.fields.route ? get("toPlace") : "",
-      cost: get("cost"),
+      cost: free ? "0" : get("cost"),
       status,
       confirmationCode: get("confirmationCode"),
       notes: get("notes"),
@@ -223,11 +225,41 @@ function ItemForm({
         </div>
       </fieldset>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field id="cost" name="cost" inputMode="decimal" label={`Cost (${currency})`} placeholder="0" defaultValue={item?.cost ?? ""} error={errors.cost} />
-        <Field id="provider" name="provider" label={meta.labels.provider} defaultValue={item?.provider ?? ""} error={errors.provider} />
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-3">
+          <Field
+            key={free ? "free" : "paid"}
+            id="cost"
+            name="cost"
+            inputMode="decimal"
+            label={`Cost (${currency})`}
+            placeholder={free ? "Free" : "0"}
+            disabled={free}
+            defaultValue={free ? "" : (item?.cost ?? "")}
+            error={free ? undefined : errors.cost}
+          />
+          <Field id="provider" name="provider" label={meta.labels.provider} defaultValue={item?.provider ?? ""} error={errors.provider} />
+        </div>
+        <label
+          className={cn(
+            "inline-flex min-h-11 cursor-pointer items-center gap-2.5 rounded-full border px-4 text-sm font-medium transition-colors has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
+            free
+              ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300"
+              : "bg-card hover:bg-accent",
+          )}
+        >
+          <input
+            type="checkbox"
+            checked={free}
+            onChange={(e) => setFree(e.target.checked)}
+            className="size-4 accent-emerald-600"
+          />
+          It&apos;s free
+        </label>
+        <p className="text-xs text-muted-foreground">
+          {free ? "Counts as free in the budget." : "Total for everyone travelling, not per person. Leave it empty if you don't know yet."}
+        </p>
       </div>
-      <p className="-mt-3 text-xs text-muted-foreground">Total for everyone travelling, not per person.</p>
 
       {/* Links */}
       <fieldset className="min-w-0 space-y-2">

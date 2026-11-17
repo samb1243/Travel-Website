@@ -18,6 +18,11 @@ export function sumMoney(values: Array<MoneyLike | null | undefined>): number {
   return fromCents(values.reduce<number>((acc, v) => acc + toCents(v), 0));
 }
 
+/** A price for display: "Free" for 0, otherwise the amount. */
+export function formatPrice(amount: MoneyLike, currency: string) {
+  return Number(amount.toString()) === 0 ? "Free" : formatMoney(amount, currency);
+}
+
 export function formatMoney(amount: MoneyLike, currency: string, opts?: { compact?: boolean }) {
   const n = Number(amount.toString());
   return new Intl.NumberFormat("en", {

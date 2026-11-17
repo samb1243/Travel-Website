@@ -28,7 +28,7 @@ import {
 import { formatDate, formatItemWhen, plural } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 import { CATEGORY_META, linkButtonLabel } from "@/lib/item-categories";
-import { formatMoney } from "@/lib/money";
+import { formatPrice } from "@/lib/money";
 import { ITEM_STATUSES, STATUS_META, type ItemStatus } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { setItemStatus } from "@/server/actions/builder";
@@ -268,7 +268,7 @@ function ChecklistRow({
               </span>
             </span>
             {item.cost !== null ? (
-              <span className="shrink-0 text-sm font-medium tabular-nums">{formatMoney(item.cost, currency)}</span>
+              <span className="shrink-0 text-sm font-medium tabular-nums">{formatPrice(item.cost, currency)}</span>
             ) : null}
           </button>
           <p className="mt-0.5 pl-6 text-sm text-muted-foreground">

@@ -12,7 +12,7 @@ import { parseDateOnly } from "@/lib/dates";
 import { formatDate, formatItemWhen } from "@/lib/format";
 import { CATEGORY_META, LINK_KIND_META, linkButtonLabel } from "@/lib/item-categories";
 import { buildItinerary, MAX_DAYS, type DayEntry, type ItineraryDay, type Night } from "@/lib/itinerary";
-import { formatMoney } from "@/lib/money";
+import { formatPrice } from "@/lib/money";
 import { STATUS_META } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
@@ -281,7 +281,7 @@ function Entry({ entry, currency, onEdit }: { entry: DayEntry<BuilderItem>; curr
             <span className="flex items-start justify-between gap-2">
               <span className="font-medium text-pretty">{item.title}</span>
               {item.cost !== null && kind !== "end" ? (
-                <span className="shrink-0 text-sm tabular-nums text-muted-foreground">{formatMoney(item.cost, currency)}</span>
+                <span className="shrink-0 text-sm tabular-nums text-muted-foreground">{formatPrice(item.cost, currency)}</span>
               ) : null}
             </span>
             {details ? <span className="block text-sm text-muted-foreground">{details}</span> : null}
