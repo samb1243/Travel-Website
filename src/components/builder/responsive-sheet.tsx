@@ -25,8 +25,8 @@ export function ResponsiveSheet({
         side={desktop ? "right" : "bottom"}
         className={
           desktop
-            ? "w-full gap-0 overflow-y-auto sm:max-w-lg"
-            : "max-h-[92dvh] gap-0 overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)]"
+            ? "w-full gap-0 overflow-x-hidden overflow-y-auto sm:max-w-lg"
+            : "max-h-[92dvh] gap-0 overflow-x-hidden overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)]"
         }
       >
         <SheetHeader className="sticky top-0 z-10 border-b bg-popover/95 backdrop-blur">

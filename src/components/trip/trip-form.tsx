@@ -67,7 +67,7 @@ export function TripForm({
         error={errors.title}
       />
 
-      <fieldset className="space-y-2">
+      <fieldset className="min-w-0 space-y-2">
         <legend className="mb-2 text-sm font-medium">Type of trip</legend>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {TRIP_TYPES.map((t) => {

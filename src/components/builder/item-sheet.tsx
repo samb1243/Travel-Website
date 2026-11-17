@@ -144,9 +144,11 @@ function ItemForm({
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-5">
       {/* Category chips */}
-      <fieldset>
+      {/* min-w-0: a fieldset otherwise grows to fit its contents and pushes the form sideways */}
+      <fieldset className="min-w-0">
         <legend className="sr-only">What is it?</legend>
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+        {/* All 7 types visible at once: a 4-column grid of tiles, no sideways scrolling */}
+        <div className="grid grid-cols-4 gap-2">
           {ITEM_CATEGORIES.map((c) => {
             const m = CATEGORY_META[c];
             const Icon = m.icon;
@@ -155,7 +157,7 @@ function ItemForm({
               <label
                 key={c}
                 className={cn(
-                  "flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
+                  "flex min-h-16 min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border px-1 py-2 text-center text-xs leading-tight font-medium transition-colors has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
                   active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-accent",
                 )}
               >
@@ -198,7 +200,7 @@ function ItemForm({
       <p className="-mt-3 text-xs text-muted-foreground">Times are local to where it happens. Leave the time empty for an all-day item.</p>
 
       {/* Status */}
-      <fieldset className="space-y-2">
+      <fieldset className="min-w-0 space-y-2">
         <legend className="text-sm font-medium">Booking status</legend>
         <div className="grid grid-cols-2 gap-2">
           {ITEM_STATUSES.map((s) => {
@@ -228,7 +230,7 @@ function ItemForm({
       <p className="-mt-3 text-xs text-muted-foreground">Total for everyone travelling, not per person.</p>
 
       {/* Links */}
-      <fieldset className="space-y-2">
+      <fieldset className="min-w-0 space-y-2">
         <legend className="text-sm font-medium">Links</legend>
         {links.map((l) => (
           <div key={l.key} className="space-y-2 rounded-xl border p-3">

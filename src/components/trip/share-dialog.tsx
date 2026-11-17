@@ -62,7 +62,7 @@ export function ShareDialog({ tripId, slug, visibility }: { tripId: string; slug
           <DialogDescription>Choose who can see it. Shared trips are read-only, and anyone who can see one can copy it.</DialogDescription>
         </DialogHeader>
 
-        <fieldset className="space-y-2" disabled={pending}>
+        <fieldset className="min-w-0 space-y-2" disabled={pending}>
           <legend className="sr-only">Who can see this trip</legend>
           {OPTIONS.map((v) => {
             const meta = VISIBILITY_META[v];
