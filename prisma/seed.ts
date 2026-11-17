@@ -11,6 +11,12 @@ import { addDays, atTime, parseDateOnly } from "../src/lib/dates";
 import { makeTripSlug } from "../src/lib/slug";
 import { DEMO_PASSWORD, SEED_TRIPS, SEED_USERS, type SeedItem } from "./seed-data";
 
+// The demo accounts share a published password, so never create them on a live site.
+if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED !== "yes") {
+  console.error("Refusing to seed demo accounts with NODE_ENV=production (set ALLOW_DEMO_SEED=yes to override).");
+  process.exit(1);
+}
+
 const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 });
@@ -90,6 +96,7 @@ async function main() {
         type: t.type,
         visibility: t.visibility,
         description: t.description,
+        coverImageUrl: t.coverImageUrl ?? null,
         startDate: start,
         endDate: parseDateOnly(t.endDate),
         currency: t.currency,

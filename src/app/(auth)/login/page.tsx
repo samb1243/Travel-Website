@@ -7,6 +7,7 @@ import { GoogleButton } from "@/components/auth/google-button";
 import { LoginForm } from "@/components/auth/login-form";
 import { OrDivider } from "@/components/auth/form-bits";
 import { googleEnabled } from "@/lib/auth";
+import { APP_NAME } from "@/lib/brand";
 import { safeNextPath } from "@/lib/safe-redirect";
 import { getCurrentUser } from "@/server/session";
 
@@ -19,7 +20,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
       subtitle="Log in to see your trips and bookings."
       footer={
         <>
-          New to TripStack?{" "}
+          New to {APP_NAME}?{" "}
           <Link href="/signup" className="font-medium text-foreground underline underline-offset-4">
             Create an account
           </Link>

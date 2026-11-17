@@ -2,6 +2,8 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
+import { APP_NAME } from "@/lib/brand";
+import { sanitizeUserFields } from "@/lib/validation/auth";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/server/email";
 
@@ -10,7 +12,7 @@ export const googleEnabled = Boolean(
 );
 
 export const auth = betterAuth({
-  appName: "TripStack",
+  appName: APP_NAME,
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
   database: prismaAdapter(db, { provider: "postgresql" }),
@@ -26,7 +28,7 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       await sendEmail({
         to: user.email,
-        subject: "Reset your TripStack password",
+        subject: `Reset your ${APP_NAME} password`,
         text: `Hi ${user.name},\n\nReset your password here (valid for 1 hour):\n${url}\n\nIf you didn't ask for this, ignore this email.`,
       });
     },
@@ -60,6 +62,19 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24,
     // No cookie cache: profile edits (name, avatar, currency) show up immediately,
     // and a revoked session stops working at once. Costs one indexed lookup.
+  },
+
+  // Profile changes go through our own validated action (src/server/actions/profile.ts),
+  // so Better Auth's generic "update user" endpoint is switched off.
+  disabledPaths: ["/update-user"],
+
+  // Sign-up and Google sign-in write users without going through our forms,
+  // so clean the name and avatar here too (defence in depth).
+  databaseHooks: {
+    user: {
+      create: { before: async (user) => ({ data: sanitizeUserFields(user) }) },
+      update: { before: async (user) => ({ data: sanitizeUserFields(user) }) },
+    },
   },
 
   // Must be last: lets server actions set auth cookies.

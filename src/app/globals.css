@@ -137,3 +137,48 @@
     background: color-mix(in oklch, var(--primary) 25%, transparent);
   }
 }
+/* --- Trip map (Leaflet) ------------------------------------------------------ */
+.route-map .route-line {
+  stroke: var(--primary);
+}
+.route-map .route-pin-selected {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--primary) 35%, transparent);
+}
+.route-map .leaflet-container,
+.route-map.leaflet-container {
+  font-family: inherit;
+  background: var(--muted);
+}
+/* Dusk-tinted tiles in dark mode, so the map isn't a white slab. */
+.dark .route-map .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.6);
+}
+.dark .route-map .leaflet-control-attribution {
+  background: color-mix(in oklch, var(--background) 80%, transparent);
+  color: var(--muted-foreground);
+}
+.dark .route-map .leaflet-control-attribution a {
+  color: var(--foreground);
+}
+.route-map .leaflet-control-zoom a {
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+}
+.dark .route-map .leaflet-bar a {
+  background: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.dark .route-map .leaflet-bar a:hover {
+  background: var(--accent);
+}
+.dark .route-map .leaflet-tooltip {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border-color: var(--border);
+}
+.dark .route-map .leaflet-tooltip-top::before {
+  border-top-color: var(--popover);
+}

@@ -40,6 +40,7 @@ export type SeedStop = {
 
 export type SeedTrip = {
   ownerEmail: string;
+  coverImageUrl?: string;
   /** Fixed slug suffix so demo share links survive re-seeding */
   slugSuffix: string;
   title: string;
@@ -64,6 +65,10 @@ export const DEMO_PASSWORD = "tripstack-demo";
 const booking = (url: string, label?: string): SeedLink => ({ kind: "BOOKING", url, label });
 const confirmation = (url: string, label = "My booking"): SeedLink => ({ kind: "CONFIRMATION", url, label });
 const info = (url: string, label?: string): SeedLink => ({ kind: "INFO", url, label });
+// Cover photos from Unsplash (free Unsplash License), served by their CDN.
+const unsplash = (photoId: string) =>
+  `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=1200&q=70`;
+
 const map = (lat: number, lng: number, label = "Map"): SeedLink => ({
   kind: "MAP",
   url: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`,
@@ -82,6 +87,7 @@ export const SEED_USERS: SeedUser[] = [
 const southeastAsia: SeedTrip = {
   ownerEmail: "maya@example.com",
   slugSuffix: "sea3wk2027",
+  coverImageUrl: unsplash("photo-1694152363060-cc26bde73872"),
   title: "Three weeks in Thailand, Laos & Vietnam",
   type: "BACKPACKING",
   visibility: "PUBLIC",
@@ -566,6 +572,7 @@ const southeastAsia: SeedTrip = {
 const europeRail: SeedTrip = {
   ownerEmail: "lukas@example.com",
   slugSuffix: "eurail2027",
+  coverImageUrl: unsplash("photo-1600623471616-8c1966c91ff6"),
   title: "Two weeks by train: Amsterdam to Budapest",
   type: "MULTI_CITY",
   visibility: "PUBLIC",
@@ -892,6 +899,7 @@ const stage = (day: number, title: string, notes: string): SeedItem => ({
 const tmb: SeedTrip = {
   ownerEmail: "sophie@example.com",
   slugSuffix: "tmb8stages",
+  coverImageUrl: unsplash("photo-1600417145424-85b4254fe4b1"),
   title: "Tour du Mont Blanc: 8 stages, 3 countries",
   type: "HIKING",
   visibility: "PUBLIC",
@@ -1194,6 +1202,7 @@ const tmb: SeedTrip = {
 const privateDraft: SeedTrip = {
   ownerEmail: "maya@example.com",
   slugSuffix: "japandraft",
+  coverImageUrl: unsplash("photo-1669711675954-ff2581eaedc2"),
   title: "Japan in cherry blossom season (draft)",
   type: "MULTI_CITY",
   visibility: "PRIVATE",

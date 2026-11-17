@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Suspense } from "react";
 import { cn } from "@/lib/utils";
 import { NAV_LINKS } from "@/components/nav-links";
 
@@ -9,9 +10,23 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+// The pathname is request data, so the highlighted versions render inside
+// <Suspense>; the fallback is the same nav with nothing highlighted.
+
 /** Inline links in the top header, shown from tablet width up. */
 export function DesktopNav() {
-  const pathname = usePathname();
+  return (
+    <Suspense fallback={<DesktopNavLinks pathname="" />}>
+      <DesktopNavWithPath />
+    </Suspense>
+  );
+}
+
+function DesktopNavWithPath() {
+  return <DesktopNavLinks pathname={usePathname()} />;
+}
+
+function DesktopNavLinks({ pathname }: { pathname: string }) {
   return (
     <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
       {NAV_LINKS.map(({ href, label }) => (
@@ -33,7 +48,18 @@ export function DesktopNav() {
 
 /** Thumb-friendly tab bar fixed to the bottom of the screen on phones. */
 export function MobileTabBar() {
-  const pathname = usePathname();
+  return (
+    <Suspense fallback={<MobileTabBarLinks pathname="" />}>
+      <MobileTabBarWithPath />
+    </Suspense>
+  );
+}
+
+function MobileTabBarWithPath() {
+  return <MobileTabBarLinks pathname={usePathname()} />;
+}
+
+function MobileTabBarLinks({ pathname }: { pathname: string }) {
   return (
     <nav
       aria-label="Main"

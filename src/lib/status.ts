@@ -49,3 +49,23 @@ export const STATUS_META: Record<ItemStatus, StatusMeta> = {
     border: "border-l-zinc-400",
   },
 };
+
+export type StatusCounts = Record<ItemStatus, number>;
+
+export const emptyStatusCounts = (): StatusCounts => ({
+  BOOKED: 0,
+  PAY_ON_ARRIVAL: 0,
+  TO_BOOK: 0,
+  NOT_NEEDED: 0,
+});
+
+/**
+ * "7/10 booked": items that need a booking are BOOKED + PAY_ON_ARRIVAL + TO_BOOK.
+ * Pay-on-arrival counts as booked (it's reserved, you just pay later).
+ * "No booking needed" items are left out of the count entirely.
+ */
+export function bookingProgress(counts: StatusCounts) {
+  const booked = counts.BOOKED + counts.PAY_ON_ARRIVAL;
+  const total = booked + counts.TO_BOOK;
+  return { booked, total, toBook: counts.TO_BOOK, percent: total ? Math.round((booked / total) * 100) : 0 };
+}

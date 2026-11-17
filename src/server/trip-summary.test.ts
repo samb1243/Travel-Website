@@ -60,3 +60,23 @@ describe("computeTripSummary", () => {
     expect(s.totalCost).toBe(20);
   });
 });
+
+describe("costPerPersonEur", () => {
+  it("divides by travellers and converts roughly to euros", () => {
+    const s = computeTripSummary({
+      startDate: null,
+      endDate: null,
+      stops: [],
+      items: [{ cost: 1000 }, { cost: 200 }],
+      currency: "USD",
+      travellers: 2,
+    });
+    expect(s.totalCost).toBe(1200);
+    expect(s.costPerPersonEur).toBe(552); // 600 USD × 0.92
+  });
+
+  it("returns null for a currency without a rate", () => {
+    const s = computeTripSummary({ startDate: null, endDate: null, stops: [], items: [{ cost: 10 }], currency: "XXX" });
+    expect(s.costPerPersonEur).toBeNull();
+  });
+});

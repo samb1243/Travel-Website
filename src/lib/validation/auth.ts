@@ -34,12 +34,22 @@ export const profileSchema = z.object({
   homeCurrency: z.enum(CURRENCY_CODES, "Pick a currency from the list"),
 });
 
-/** First error message per field, for showing under inputs. */
-export function fieldErrors(error: z.ZodError): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "form");
-    out[key] ??= issue.message;
+export { fieldErrors } from "./common";
+
+/**
+ * Server-side clean-up for user records written by Better Auth itself
+ * (sign-up, Google sign-in), which skip our forms: the name is trimmed and
+ * capped at 80 characters, and an avatar must be an https URL (else dropped).
+ */
+export function sanitizeUserFields<T extends Record<string, unknown>>(user: T): T {
+  const out: Record<string, unknown> = { ...user };
+  if ("name" in user) {
+    const name = typeof user.name === "string" ? user.name.replace(/\s+/g, " ").trim().slice(0, 80) : "";
+    out.name = name || "Traveller";
   }
-  return out;
+  if ("image" in user && user.image != null) {
+    const ok = typeof user.image === "string" && user.image.length <= 1000 && /^https:\/\/[^\s]+$/i.test(user.image);
+    out.image = ok ? user.image : null;
+  }
+  return out as T;
 }

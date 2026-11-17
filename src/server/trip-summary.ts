@@ -4,6 +4,7 @@
 
 import type { PrismaClient } from "@/generated/prisma/client";
 import { daysBetween } from "@/lib/dates";
+import { approxEur } from "@/lib/fx";
 import { sumMoney, type MoneyLike } from "@/lib/money";
 
 export type SummaryInput = {
@@ -11,12 +12,17 @@ export type SummaryInput = {
   endDate: Date | null;
   stops: { countryCode: string | null; arriveOn: Date | null; departOn: Date | null }[];
   items: { cost: MoneyLike | null }[];
+  /** Used for the approximate per-person euro figure Explore filters on */
+  currency?: string;
+  travellers?: number;
 };
 
 export type TripSummary = {
   durationDays: number | null;
   countryCodes: string[];
   totalCost: number;
+  /** Rough cost per person in euros (src/lib/fx.ts), only for Explore's budget filter */
+  costPerPersonEur: number | null;
 };
 
 export function computeTripSummary(input: SummaryInput): TripSummary {
@@ -45,7 +51,10 @@ export function computeTripSummary(input: SummaryInput): TripSummary {
   // Every item counts, including "no booking needed" ones (walk-ins still cost money).
   const totalCost = sumMoney(input.items.map((i) => i.cost));
 
-  return { durationDays, countryCodes, totalCost };
+  const perPerson = totalCost / Math.max(1, input.travellers ?? 1);
+  const costPerPersonEur = approxEur(perPerson, input.currency ?? "EUR");
+
+  return { durationDays, countryCodes, totalCost, costPerPersonEur };
 }
 
 type Db = Pick<PrismaClient, "trip">;
@@ -56,6 +65,8 @@ export async function refreshTripSummary(db: Db, tripId: string): Promise<TripSu
     select: {
       startDate: true,
       endDate: true,
+      currency: true,
+      travellers: true,
       stops: { select: { countryCode: true, arriveOn: true, departOn: true } },
       items: { select: { cost: true } },
     },

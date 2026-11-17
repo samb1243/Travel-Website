@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { MobileTabBar } from "@/components/main-nav";
 import { ThemeSync, themeScript } from "@/components/theme";
 import { Toaster } from "@/components/ui/sonner";
+import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,8 +26,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "TripStack: plan and share trips",
-    template: "%s · TripStack",
+    default: `${APP_NAME}: ${APP_TAGLINE.toLowerCase()}`,
+    template: `%s · ${APP_NAME}`,
   },
   description:
     "Keep your route, bookings, links and budget in one place, and copy other travellers' trips.",

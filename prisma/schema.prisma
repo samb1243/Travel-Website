@@ -1,4 +1,4 @@
-// TripStack database schema.
+// Tripster database schema.
 //
 // Conventions
 // - Money is Decimal(14,2) in the trip's currency. An item's cost is the total
@@ -6,7 +6,7 @@
 // - Item.startAt / endAt are local "wall clock" times at the place they happen
 //   (e.g. a 07:40 departure in Bangkok). They're stored as timestamps without a
 //   time zone and always formatted as UTC, so they never shift.
-// - Trip.durationDays / countryCodes / totalCost are summary fields recalculated
+// - Trip.durationDays / countryCodes / totalCost / costPerPersonEur are summary fields recalculated
 //   on every write (src/server/trip-summary.ts) so Explore can filter in SQL.
 // - ItemStatus NOT_NEEDED means "no booking needed" (walk-in, free, already
 //   owned). Its cost still counts toward the budget.
@@ -152,6 +152,8 @@ model Trip {
   durationDays Int?
   countryCodes String[]
   totalCost    Decimal  @default(0) @db.Decimal(14, 2)
+  /// Rough cost per person in euros (fixed approximate rates), only for Explore's budget filter
+  costPerPersonEur Decimal? @db.Decimal(14, 2)
 
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
@@ -163,6 +165,7 @@ model Trip {
 
   @@index([ownerId, updatedAt])
   @@index([visibility, publishedAt])
+  @@index([visibility, durationDays])
 }
 
 model Stop {
