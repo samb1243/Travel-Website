@@ -1,0 +1,41 @@
+// Common travel currencies. One currency per trip for now (Phase 2 adds conversion).
+export const CURRENCIES = [
+  { code: "EUR", name: "Euro" },
+  { code: "USD", name: "US dollar" },
+  { code: "GBP", name: "British pound" },
+  { code: "AUD", name: "Australian dollar" },
+  { code: "CAD", name: "Canadian dollar" },
+  { code: "NZD", name: "New Zealand dollar" },
+  { code: "CHF", name: "Swiss franc" },
+  { code: "SEK", name: "Swedish krona" },
+  { code: "NOK", name: "Norwegian krone" },
+  { code: "DKK", name: "Danish krone" },
+  { code: "PLN", name: "Polish złoty" },
+  { code: "CZK", name: "Czech koruna" },
+  { code: "HUF", name: "Hungarian forint" },
+  { code: "TRY", name: "Turkish lira" },
+  { code: "JPY", name: "Japanese yen" },
+  { code: "CNY", name: "Chinese yuan" },
+  { code: "KRW", name: "South Korean won" },
+  { code: "SGD", name: "Singapore dollar" },
+  { code: "HKD", name: "Hong Kong dollar" },
+  { code: "THB", name: "Thai baht" },
+  { code: "VND", name: "Vietnamese đồng" },
+  { code: "IDR", name: "Indonesian rupiah" },
+  { code: "MYR", name: "Malaysian ringgit" },
+  { code: "PHP", name: "Philippine peso" },
+  { code: "INR", name: "Indian rupee" },
+  { code: "AED", name: "UAE dirham" },
+  { code: "ZAR", name: "South African rand" },
+  { code: "MAD", name: "Moroccan dirham" },
+  { code: "MXN", name: "Mexican peso" },
+  { code: "BRL", name: "Brazilian real" },
+  { code: "ARS", name: "Argentine peso" },
+  { code: "CLP", name: "Chilean peso" },
+  { code: "PEN", name: "Peruvian sol" },
+  { code: "COP", name: "Colombian peso" },
+] as const;
+
+export type CurrencyCode = (typeof CURRENCIES)[number]["code"];
+
+export const CURRENCY_CODES = CURRENCIES.map((c) => c.code) as [CurrencyCode, ...CurrencyCode[]];

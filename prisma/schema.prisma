@@ -58,7 +58,7 @@ enum LinkKind {
   OTHER
 }
 
-// Field names follow Better Auth's core user table so step 3 only adds tables.
+// Field names follow Better Auth's core user table.
 model User {
   id            String   @id @default(cuid())
   name          String
@@ -71,6 +71,56 @@ model User {
 
   trips      Trip[]
   savedTrips SavedTrip[]
+  sessions   Session[]
+  accounts   Account[]
+}
+
+// --- Better Auth tables (field names must match Better Auth's schema) -------
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// One row per login method: "credential" (email + password hash) or "google".
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+/// Short-lived tokens, e.g. password reset links.
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
 }
 
 model Trip {

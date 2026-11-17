@@ -58,6 +58,9 @@ export type SeedTrip = {
 
 export type SeedUser = { name: string; email: string; homeCurrency: string };
 
+/** Password for every demo account. Demo data only; never reuse it anywhere real. */
+export const DEMO_PASSWORD = "tripstack-demo";
+
 const booking = (url: string, label?: string): SeedLink => ({ kind: "BOOKING", url, label });
 const confirmation = (url: string, label = "My booking"): SeedLink => ({ kind: "CONFIRMATION", url, label });
 const info = (url: string, label?: string): SeedLink => ({ kind: "INFO", url, label });

@@ -2,12 +2,14 @@
 // users' trips and recreates them. Run with:  npm run db:seed
 
 import "dotenv/config";
+import { randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { hashPassword } from "better-auth/crypto";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { refreshTripSummary } from "../src/server/trip-summary";
 import { addDays, atTime, parseDateOnly } from "../src/lib/dates";
 import { makeTripSlug } from "../src/lib/slug";
-import { SEED_TRIPS, SEED_USERS, type SeedItem } from "./seed-data";
+import { DEMO_PASSWORD, SEED_TRIPS, SEED_USERS, type SeedItem } from "./seed-data";
 
 const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -49,6 +51,7 @@ function byStart(a: SeedItem, b: SeedItem) {
 
 async function main() {
   const users = new Map<string, string>();
+  const passwordHash = await hashPassword(DEMO_PASSWORD);
   for (const u of SEED_USERS) {
     const user = await db.user.upsert({
       where: { email: u.email },
@@ -56,7 +59,20 @@ async function main() {
       create: { ...u, emailVerified: true },
     });
     users.set(u.email, user.id);
+
+    // Email + password login, stored the same way Better Auth does on sign-up.
+    await db.account.deleteMany({ where: { userId: user.id, providerId: "credential" } });
+    await db.account.create({
+      data: {
+        id: randomUUID(),
+        userId: user.id,
+        providerId: "credential",
+        accountId: user.id,
+        password: passwordHash,
+      },
+    });
   }
+  console.log(`Demo logins: ${SEED_USERS.map((u) => u.email).join(", ")} / password "${DEMO_PASSWORD}"`);
 
   const deleted = await db.trip.deleteMany({ where: { ownerId: { in: [...users.values()] } } });
   if (deleted.count) console.log(`Removed ${deleted.count} existing demo trips`);

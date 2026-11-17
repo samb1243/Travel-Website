@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CheckCircle2Icon, CopyIcon, MapIcon, WalletIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WindowView } from "@/components/window-view";
 import { ITEM_STATUSES, STATUS_META } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
@@ -30,41 +31,41 @@ const FEATURES = [
 export default function HomePage() {
   return (
     <div className="space-y-12">
-      <section className="space-y-6 pt-4 md:pt-10">
-        <h1 className="max-w-2xl font-heading text-4xl font-semibold tracking-tight text-balance md:text-5xl">
-          Every trip, in one place.
-        </h1>
-        <p className="max-w-xl text-lg text-muted-foreground text-pretty">
-          Plan backpacking routes, multi-city trips and hikes. Keep every booking link and
-          confirmation handy while you travel, then share the trip so others can copy it.
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Button asChild size="lg" className="h-12 px-6 text-base">
-            <Link href="/dashboard">Plan a trip</Link>
-          </Button>
-          <Button asChild size="lg" variant="outline" className="h-12 px-6 text-base">
-            <Link href="/explore">Explore trips</Link>
-          </Button>
+      <section className="grid items-center gap-10 pt-4 md:grid-cols-[1fr_280px] md:pt-10">
+        <div className="space-y-6">
+          <h1 className="max-w-2xl font-heading text-4xl font-semibold tracking-tight text-balance md:text-5xl">
+            Every trip, in one place.
+          </h1>
+          <p className="max-w-xl text-lg text-muted-foreground text-pretty">
+            Plan backpacking routes, multi-city trips and hikes. Keep every booking link and
+            confirmation handy while you travel, then share the trip so others can copy it.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button asChild size="lg" className="h-12 px-6 text-base">
+              <Link href="/signup">Plan a trip</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="h-12 px-6 text-base">
+              <Link href="/explore">Explore trips</Link>
+            </Button>
+          </div>
+          <ul className="flex flex-wrap gap-2" aria-label="Booking statuses">
+            {ITEM_STATUSES.map((s) => (
+              <li
+                key={s}
+                className={cn("rounded-full border px-3 py-1 text-sm font-medium", STATUS_META[s].badge)}
+              >
+                <span aria-hidden>{STATUS_META[s].emoji}</span> {STATUS_META[s].label}
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="flex flex-wrap gap-2" aria-label="Booking statuses">
-          {ITEM_STATUSES.map((s) => (
-            <li
-              key={s}
-              className={cn(
-                "rounded-full border px-3 py-1 text-sm font-medium",
-                STATUS_META[s].badge,
-              )}
-            >
-              <span aria-hidden>{STATUS_META[s].emoji}</span> {STATUS_META[s].label}
-            </li>
-          ))}
-        </ul>
+        <WindowView className="mx-auto hidden max-w-[280px] drop-shadow-xl md:block" />
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2">
         {FEATURES.map(({ icon: Icon, title, text }) => (
-          <div key={title} className="rounded-xl border bg-card p-5">
-            <Icon className="mb-3 size-6 text-muted-foreground" aria-hidden />
+          <div key={title} className="rounded-2xl border bg-card p-5">
+            <Icon className="mb-3 size-6 text-primary" aria-hidden />
             <h2 className="font-heading font-semibold">{title}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{text}</p>
           </div>

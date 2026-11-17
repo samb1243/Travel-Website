@@ -4,7 +4,7 @@ Plan and share trips: backpacking routes, multi-city trips and hikes. Keep the r
 links and budget in one place, then publish a trip so others can copy it.
 
 **Stack:** Next.js 16 (App Router, Cache Components) · TypeScript · Tailwind CSS 4 + shadcn/ui ·
-PostgreSQL 17 (Docker) + Prisma 7 · Zod. Coming in later steps: Better Auth, Leaflet + OpenStreetMap, dnd-kit.
+PostgreSQL 17 (Docker) + Prisma 7 · Better Auth · Zod. Coming in later steps: Leaflet + OpenStreetMap, dnd-kit.
 
 ## Requirements (Windows)
 
@@ -21,6 +21,7 @@ Keep the project **outside OneDrive** (for example `C:\dev\tripstack`). OneDrive
 cd C:\dev\tripstack
 npm install
 Copy-Item .env.example .env
+# put a random value in BETTER_AUTH_SECRET (see the comment in .env)
 npm run db:up
 npx prisma migrate deploy
 npm run db:seed
@@ -46,7 +47,31 @@ it deletes and recreates the demo users' trips and leaves everything else alone.
 Some items contain confirmation codes, private notes and "confirmation" links. These are
 personal and must never appear on shared pages or in copies.
 
-Demo logins arrive in step 3.
+**Demo logins:** each demo user above can log in with the password `tripstack-demo`.
+
+## Accounts and login
+
+- **Email + password** works out of the box. Passwords need at least 8 characters.
+- **Forgot password:** there's no email service yet, so in development the reset email
+  (with its link) is **printed in the terminal running `npm run dev`**. Copy the link into
+  the browser. Links are valid for 1 hour and work once. Resetting logs out all devices.
+- Sessions last 30 days, so you stay logged in while travelling.
+- `/dashboard`, `/profile` and `/trips/*` need a login. Everything is checked on the
+  server; `src/proxy.ts` only does a fast "no cookie at all → go to login" redirect.
+
+### Google login (optional)
+
+The "Continue with Google" button only appears when both Google variables are set.
+
+1. Go to https://console.cloud.google.com → create a project → **APIs & Services → OAuth
+   consent screen** (External, add yourself as a test user).
+2. **Credentials → Create credentials → OAuth client ID → Web application**.
+3. Authorised JavaScript origin: `http://localhost:3000`
+   Authorised redirect URI: `http://localhost:3000/api/auth/callback/google`
+4. Copy the client ID and secret into `.env` as `GOOGLE_CLIENT_ID` and
+   `GOOGLE_CLIENT_SECRET`, then restart `npm run dev`.
+
+Signing in with Google using the same email as an existing password account links the two.
 
 ## Run the app
 
@@ -79,6 +104,10 @@ http://localhost:3000/api/health; it should return `{"ok":true,"database":"up"}`
   for the whale icon to settle, then run `npm run db:up` again.
 - **Port 5432 already in use**: another Postgres is running. Stop it, or change the left-hand
   port in `docker-compose.yml` (e.g. `"5433:5432"`) and in `DATABASE_URL` in `.env`.
+- **"Prisma schema mismatch" or "missing tables" after pulling changes**: run
+  `npx prisma migrate deploy`, then `npx prisma generate`, then restart `npm run dev`.
+- **Styles look out of date after big changes**: stop the dev server, run
+  `Remove-Item -Recurse -Force .next`, and start it again.
 - **npm warns about `install-scripts`**: npm 11 blocks dependency install scripts unless
   they're approved in `package.json` → `allowScripts`. Prisma and esbuild are already approved.
 
@@ -88,7 +117,8 @@ http://localhost:3000/api/health; it should return `{"ok":true,"database":"up"}`
 prisma/              schema.prisma, migrations, seed script
 src/app/             routes (App Router)
 src/components/      shared UI; src/components/ui = shadcn/ui
-src/lib/             db client, status colours, helpers
-src/server/          data access, permission checks, server actions (from step 2)
+src/lib/             db + auth clients, validation, status colours, helpers
+src/server/          session (data access layer), permission checks, server actions
+src/proxy.ts         fast redirect to /login for signed-out visitors
 src/generated/       Prisma client (generated, not committed)
 ```
