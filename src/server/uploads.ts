@@ -9,13 +9,15 @@ import { db } from "@/lib/db";
 // "Before going live" in the README for moving them to object storage.
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const MAX_SIDE = 1600;
+/** Longest side after resizing: photos are shown wide, avatars small */
+const MAX_SIDE = { photo: 1600, avatar: 512 } as const;
+export type UploadPurpose = keyof typeof MAX_SIDE;
 /** Uploads per person per day, so the database can't be filled up */
 export const MAX_UPLOADS_PER_DAY = 60;
 
 export class UploadError extends Error {}
 
-export async function saveUpload(userId: string, file: Blob): Promise<{ url: string }> {
+export async function saveUpload(userId: string, file: Blob, purpose: UploadPurpose = "photo"): Promise<{ url: string }> {
   if (file.size === 0) throw new UploadError("That file is empty.");
   if (file.size > MAX_UPLOAD_BYTES) throw new UploadError("Photos can be up to 10 MB.");
 
@@ -28,7 +30,7 @@ export async function saveUpload(userId: string, file: Blob): Promise<{ url: str
   try {
     out = await sharp(Buffer.from(await file.arrayBuffer()), { limitInputPixels: 50_000_000, animated: false })
       .rotate() // apply the camera's orientation before the metadata is dropped
-      .resize({ width: MAX_SIDE, height: MAX_SIDE, fit: "inside", withoutEnlargement: true })
+      .resize({ width: MAX_SIDE[purpose], height: MAX_SIDE[purpose], fit: "inside", withoutEnlargement: true })
       .webp({ quality: 80 })
       .toBuffer({ resolveWithObject: true });
   } catch {
@@ -40,6 +42,13 @@ export async function saveUpload(userId: string, file: Blob): Promise<{ url: str
     select: { id: true },
   });
   return { url: `/img/${row.id}` };
+}
+
+/** Whether `url` is a photo this person uploaded (so nobody can borrow another person's upload as theirs). */
+export async function isOwnUpload(userId: string, url: string): Promise<boolean> {
+  const id = url.startsWith("/img/") ? url.slice(5) : "";
+  if (!/^[a-z0-9]{20,40}$/.test(id)) return false;
+  return (await db.upload.count({ where: { id, userId } })) > 0;
 }
 
 export async function getUpload(id: string) {

@@ -15,7 +15,7 @@ import {
 } from "@/server/actions/builder";
 import { copyTrip, setSaved, setVisibility } from "@/server/actions/sharing";
 import { createTrip, deleteTrip, updateTrip } from "@/server/actions/trips";
-import { updateProfile } from "@/server/actions/profile";
+import { setProfilePhoto, updateProfile } from "@/server/actions/profile";
 import { loadEditorTrip } from "@/server/trip-page";
 import { getTripBuilderData, getTripForEditor } from "@/server/trips";
 import type { CurrentUser } from "@/server/session";
@@ -201,6 +201,7 @@ describe("signed out", () => {
     ["setSaved", () => setSaved(publicFixture.trip.id, true)],
     ["copyTrip (even a public trip)", () => copyTrip(publicFixture.trip.id, { startDate: "" })],
     ["updateProfile", () => updateProfile({ ok: false }, new FormData())],
+    ["setProfilePhoto", () => setProfilePhoto("https://example.com/me.jpg")],
   ];
 
   for (const [name, attempt] of attempts) {

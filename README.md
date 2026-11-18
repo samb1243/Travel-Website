@@ -301,7 +301,7 @@ private trips") are enforced, and where.
 
 **Permissions: users can only edit their own trips**
 - Every server action is a public HTTP endpoint, so each one checks the caller itself before
-  touching data, whatever the UI sends (`src/server/actions/*`). There are 24, and nothing else
+  touching data, whatever the UI sends (`src/server/actions/*`). There are 25, and nothing else
   is exported from those files (anything exported from a `"use server"` file becomes callable).
 - Access checks live in one place, `src/server/permissions.ts`: `requireTripEditor`,
   `requireStopEditor` and `requireItemEditor` allow the owner and members; `requireTripOwner`

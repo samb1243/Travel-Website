@@ -12,14 +12,17 @@ import {
 } from "@/components/ui/select";
 import { Field, SubmitButton } from "@/components/auth/form-bits";
 import { UserAvatar } from "@/components/user-avatar";
+import { ImagePicker } from "@/components/image-picker";
 import { CURRENCIES } from "@/lib/currencies";
-import { updateProfile, type ProfileState } from "@/server/actions/profile";
+import { setProfilePhoto, updateProfile, type ProfileState } from "@/server/actions/profile";
+import { useRouter } from "next/navigation";
 
 export function ProfileForm({
   user,
 }: {
   user: { name: string; email: string; image: string | null; homeCurrency: string };
 }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState<ProfileState, FormData>(updateProfile, { ok: false });
   const [name, setName] = useState(user.name);
   const [image, setImage] = useState(user.image ?? "");
@@ -28,6 +31,22 @@ export function ProfileForm({
   useEffect(() => {
     if (state.ok && state.message) toast.success(state.message);
   }, [state]);
+
+  /** The photo saves on its own, so the header avatar updates at once */
+  function changePhoto(url: string) {
+    const previous = image;
+    setImage(url);
+    startTransition(async () => {
+      const result = await setProfilePhoto(url);
+      if (result.ok) {
+        toast.success(url ? "Profile photo updated" : "Profile photo removed");
+        router.refresh();
+      } else {
+        setImage(previous);
+        toast.error(result.message ?? "Couldn't save your photo. Try again.");
+      }
+    });
+  }
 
   // Submit via a handler rather than <form action>: React resets the form after
   // a form action, and that reset snaps the Radix currency picker back to its
@@ -41,7 +60,7 @@ export function ProfileForm({
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <div className="flex items-center gap-4">
-        <UserAvatar name={name || user.name} image={image.startsWith("https://") ? image : null} className="size-16 text-lg" />
+        <UserAvatar name={name || user.name} image={image.startsWith("https://") || image.startsWith("/img/") ? image : null} className="size-16 text-lg" />
         <div className="min-w-0">
           <div className="truncate font-medium">{name || user.name}</div>
           <div className="truncate text-sm text-muted-foreground">{user.email}</div>
@@ -57,18 +76,19 @@ export function ProfileForm({
         onChange={(e) => setName(e.target.value)}
         error={state.errors?.name}
       />
-      <Field
-        id="image"
+      <ImagePicker
         name="image"
-        type="url"
-        label="Profile photo link (optional)"
-        placeholder="https://…"
-        inputMode="url"
         value={image}
-        onChange={(e) => setImage(e.target.value)}
-        hint="Paste an https:// link to an image. Photo uploads come later."
+        onChange={changePhoto}
+        label="Profile photo (optional)"
+        purpose="avatar"
+        preview={false}
         error={state.errors?.image}
       />
+      <p className="-mt-3 text-sm text-muted-foreground">
+        Upload one from your device or paste a link. It&apos;s saved straight away, and shows in the top corner and
+        next to trips you share.
+      </p>
       <div className="space-y-2">
         <Label htmlFor="homeCurrency">Home currency</Label>
         <Select name="homeCurrency" value={currency} onValueChange={setCurrency}>

@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { GET as getImage } from "@/app/img/[id]/route";
 import { POST as upload } from "@/app/api/uploads/route";
 import { saveItem } from "@/server/actions/builder";
+import { setProfilePhoto, updateProfile } from "@/server/actions/profile";
 import { copyTrip } from "@/server/actions/sharing";
 import { getTripBuilderData } from "@/server/trips";
 import type { CurrentUser } from "@/server/session";
@@ -107,6 +108,47 @@ describe("photo uploads", () => {
     expect([meta.format, meta.width, meta.height]).toEqual(["webp", 1600, 1067]);
     expect(meta.exif).toBeUndefined();
     expect(bytes.toString("latin1")).not.toContain("SecretCam");
+  });
+
+  it("stores profile photos smaller", async () => {
+    const { url } = await saveUpload(owner.id, new Blob([new Uint8Array(await png(2000, 1000))]), "avatar");
+    const row = await db.upload.findUniqueOrThrow({ where: { id: url.slice(5) } });
+    expect([row.width, row.height]).toEqual([512, 256]);
+  });
+
+  it("lets you use your own upload as your profile photo, but not someone else's", async () => {
+    const mine = await saveUpload(owner.id, new Blob([new Uint8Array(await png(100, 100))]), "avatar");
+    const theirs = await saveUpload(traveller.id, new Blob([new Uint8Array(await png(100, 100))]), "avatar");
+    const profile = (image: string) => {
+      const fd = new FormData();
+      fd.set("name", "Maya");
+      fd.set("image", image);
+      fd.set("homeCurrency", "EUR");
+      return updateProfile({ ok: false }, fd);
+    };
+    signInAs(owner);
+    expect(await profile(theirs.url)).toMatchObject({ ok: false, errors: { image: expect.any(String) } });
+    expect(await profile("/img/doesnotexist000000000000")).toMatchObject({ ok: false });
+    expect((await db.user.findUniqueOrThrow({ where: { id: owner.id } })).image).toBeNull();
+
+    expect(await profile(mine.url)).toMatchObject({ ok: true });
+    expect((await db.user.findUniqueOrThrow({ where: { id: owner.id } })).image).toBe(mine.url);
+  });
+
+  it("saves a new profile photo straight away, and only your own", async () => {
+    const mine = await saveUpload(owner.id, new Blob([new Uint8Array(await png(100, 100))]), "avatar");
+    const theirs = await saveUpload(traveller.id, new Blob([new Uint8Array(await png(100, 100))]), "avatar");
+    signInAs(owner);
+    const image = async () => (await db.user.findUniqueOrThrow({ where: { id: owner.id } })).image;
+
+    expect(await setProfilePhoto(theirs.url)).toMatchObject({ ok: false });
+    expect(await setProfilePhoto("javascript:alert(1)")).toMatchObject({ ok: false });
+    expect(await image()).toBeNull();
+
+    expect(await setProfilePhoto(mine.url)).toMatchObject({ ok: true });
+    expect(await image()).toBe(mine.url);
+    expect(await setProfilePhoto("")).toMatchObject({ ok: true });
+    expect(await image()).toBeNull();
   });
 
   it("rejects files that aren't images", async () => {

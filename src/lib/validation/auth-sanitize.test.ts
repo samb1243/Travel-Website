@@ -9,6 +9,12 @@ describe("sanitizeUserFields", () => {
     expect(sanitizeUserFields({ name: 42 }).name).toBe("Traveller");
   });
 
+  it("keeps photos uploaded here", () => {
+    expect(sanitizeUserFields({ image: "/img/cmabc1234567890abcdefghij" }).image).toBe("/img/cmabc1234567890abcdefghij");
+    expect(sanitizeUserFields({ image: "/img/../../etc/passwd" }).image).toBeNull();
+    expect(sanitizeUserFields({ image: "//evil.example/a.png" }).image).toBeNull();
+  });
+
   it("keeps only https avatar links", () => {
     expect(sanitizeUserFields({ image: "https://lh3.googleusercontent.com/a/abc" }).image).toBe("https://lh3.googleusercontent.com/a/abc");
     expect(sanitizeUserFields({ image: "http://example.com/a.png" }).image).toBeNull();

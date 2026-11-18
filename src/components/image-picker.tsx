@@ -17,6 +17,8 @@ export function ImagePicker({
   label,
   error,
   name,
+  purpose = "photo",
+  preview = true,
   className,
 }: {
   value: string;
@@ -25,6 +27,10 @@ export function ImagePicker({
   error?: string;
   /** Also submit the value as a hidden form field with this name */
   name?: string;
+  /** "avatar" uploads are stored smaller */
+  purpose?: "photo" | "avatar";
+  /** Show the chosen picture here (off when the page shows it elsewhere, like an avatar) */
+  preview?: boolean;
   className?: string;
 }) {
   const id = useId();
@@ -40,6 +46,7 @@ export function ImagePicker({
     try {
       const body = new FormData();
       body.set("file", file);
+      body.set("purpose", purpose);
       const res = await fetch("/api/uploads", { method: "POST", body });
       const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
       if (!res.ok || !json.url) throw new Error(json.error ?? "Upload failed. Try again.");
@@ -70,7 +77,7 @@ export function ImagePicker({
       </p>
       {name ? <input type="hidden" name={name} value={value} /> : null}
 
-      {value ? (
+      {value && preview ? (
         <div className="relative">
           {broken ? (
             <div className="grid aspect-video w-full place-items-center rounded-xl border border-dashed px-4 text-center text-sm text-muted-foreground">
@@ -148,6 +155,11 @@ export function ImagePicker({
           <Button type="button" variant="outline" className="h-11 rounded-xl" disabled={busy} onClick={() => setMode("link")}>
             <LinkIcon aria-hidden /> {value ? "Use a link instead" : "Paste a link"}
           </Button>
+          {value && !preview ? (
+            <Button type="button" variant="ghost" className="h-11 rounded-xl" disabled={busy} onClick={() => onChange("")}>
+              <XIcon aria-hidden /> Remove
+            </Button>
+          ) : null}
         </div>
       )}
       {shownError ? <p className="text-sm text-destructive">{shownError}</p> : null}

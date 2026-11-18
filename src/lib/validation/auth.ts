@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CURRENCY_CODES } from "@/lib/currencies";
+import { optionalImageUrl, UPLOAD_PATH } from "./common";
 
 // Shared by the forms (instant feedback) and the server (the real check).
 
@@ -25,12 +26,8 @@ export const logInSchema = z.object({
 
 export const profileSchema = z.object({
   name: nameSchema,
-  image: z
-    .union([
-      z.literal(""),
-      z.url({ protocol: /^https$/, message: "Use an https:// image link" }).max(500),
-    ])
-    .transform((v) => (v === "" ? null : v)),
+  /** An https:// link, or a photo uploaded here (/img/<id>). "" = none. */
+  image: optionalImageUrl,
   homeCurrency: z.enum(CURRENCY_CODES, "Pick a currency from the list"),
 });
 
@@ -39,7 +36,8 @@ export { fieldErrors } from "./common";
 /**
  * Server-side clean-up for user records written by Better Auth itself
  * (sign-up, Google sign-in), which skip our forms: the name is trimmed and
- * capped at 80 characters, and an avatar must be an https URL (else dropped).
+ * capped at 80 characters, and an avatar must be an https URL or one of our
+ * uploads (else dropped).
  */
 export function sanitizeUserFields<T extends Record<string, unknown>>(user: T): T {
   const out: Record<string, unknown> = { ...user };
@@ -48,7 +46,10 @@ export function sanitizeUserFields<T extends Record<string, unknown>>(user: T): 
     out.name = name || "Traveller";
   }
   if ("image" in user && user.image != null) {
-    const ok = typeof user.image === "string" && user.image.length <= 1000 && /^https:\/\/[^\s]+$/i.test(user.image);
+    const ok =
+      typeof user.image === "string" &&
+      user.image.length <= 1000 &&
+      (/^https:\/\/[^\s]+$/i.test(user.image) || UPLOAD_PATH.test(user.image));
     out.image = ok ? user.image : null;
   }
   return out as T;
