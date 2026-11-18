@@ -8,7 +8,7 @@ import { parseDateOnly, toDateOnly } from "@/lib/dates";
 import { formatDate, formatDateRange, formatItemWhen, plural } from "@/lib/format";
 import { CATEGORY_META } from "@/lib/item-categories";
 import { buildItinerary, type DayEntry } from "@/lib/itinerary";
-import { formatMoney, formatPrice } from "@/lib/money";
+import { formatMoney, itemPriceParts } from "@/lib/money";
 import { STATUS_META } from "@/lib/status";
 import { formatTripTypes } from "@/lib/trip-types";
 import { loadEditorTrip } from "@/server/trip-page";
@@ -170,7 +170,7 @@ async function PrintableTrip({ params, searchParams }: Pick<PageProps<"/trips/[i
                     <span className="font-semibold">{i.title}</span>
                     {i.startAt ? <span className="text-[#4a5a55]"> · {formatItemWhen(i.startAt, i.endAt, i.allDay)}</span> : null}
                   </span>
-                  {i.cost !== null ? <span className="tabular-nums">{formatPrice(i.cost, trip.currency)}</span> : null}
+                  <PrintPrice item={i} currency={trip.currency} />
                 </li>
               ))}
             </ul>
@@ -229,9 +229,20 @@ function PrintEntry({ entry, currency, showPrivate }: { entry: DayEntry<BuilderI
         ) : null}
       </span>
       <span className="text-right">
-        {kind !== "end" && item.cost !== null ? <span className="block tabular-nums">{formatPrice(item.cost, currency)}</span> : null}
+        {kind !== "end" ? <PrintPrice item={item} currency={currency} /> : null}
         {kind !== "end" ? <span className="block text-xs text-[#4a5a55]">{STATUS_META[item.status].label}</span> : null}
       </span>
     </li>
+  );
+}
+
+function PrintPrice({ item, currency }: { item: BuilderItem; currency: string }) {
+  const parts = itemPriceParts(item.cost, item.currency, currency, item.costInTripCurrency);
+  if (!parts) return null;
+  return (
+    <span className="block tabular-nums">
+      {parts.main}
+      {parts.converted ? <span className="text-[#4a5a55]"> ({parts.converted})</span> : null}
+    </span>
   );
 }

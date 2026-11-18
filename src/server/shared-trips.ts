@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { toDateOnly } from "@/lib/dates";
 import { BUDGETS, LENGTHS, PAGE_SIZE, type ExploreFilters } from "@/lib/explore";
 import { canViewTrip, stripPersonal, type CopySource } from "@/lib/sharing";
+import { APPROX_RATES, costInTripCurrency, type RateTable } from "@/lib/convert";
+import { getRates } from "@/server/rates";
 import type { Prisma } from "@/generated/prisma/client";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
 
@@ -90,7 +92,7 @@ async function findViewable(where: Prisma.TripWhereUniqueInput, viewerId: string
   return trip;
 }
 
-function toSharedItem(i: SharedTripRow["items"][number]): BuilderItem {
+function toSharedItem(i: SharedTripRow["items"][number], tripCurrency: string, rates: RateTable): BuilderItem {
   return stripPersonal({
     id: i.id,
     stopId: i.stopId,
@@ -103,6 +105,8 @@ function toSharedItem(i: SharedTripRow["items"][number]): BuilderItem {
     fromPlace: i.fromPlace,
     toPlace: i.toPlace,
     cost: i.cost === null ? null : Number(i.cost),
+    currency: i.currency,
+    costInTripCurrency: costInTripCurrency(i.cost, i.currency, tripCurrency, rates),
     status: i.status,
     notes: i.notes,
     links: i.links.map((l) => ({ id: l.id, kind: l.kind, label: l.label, url: l.url })),
@@ -119,7 +123,8 @@ export const getSharedTrip = cache(async (slug: string, viewerId: string | null)
   const trip = await findViewable({ slug }, viewerId);
   if (!trip) return null;
 
-  const items = trip.items.map(toSharedItem);
+  const rates = trip.items.some((i) => i.currency && i.currency !== trip.currency) ? (await getRates()).table : APPROX_RATES;
+  const items = trip.items.map((i) => toSharedItem(i, trip.currency, rates));
   const stops: BuilderStop[] = trip.stops.map((s) => ({
     id: s.id,
     name: s.name,

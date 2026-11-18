@@ -1,5 +1,6 @@
 "use server";
 
+import { getRates } from "@/server/rates";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -22,7 +23,7 @@ export type ActionResult =
 const id = z.string().min(1).max(40);
 
 async function afterChange(tripId: string) {
-  await refreshTripSummary(db, tripId);
+  await refreshTripSummary(db, tripId, (await getRates()).table);
   revalidatePath(`/trips/${tripId}`, "layout");
   revalidatePath("/dashboard");
 }
@@ -107,7 +108,10 @@ export async function saveItem(
 
   const parsed = itemSchema.safeParse(input);
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
-  const { links, stopId, ...data } = parsed.data;
+  const { links, stopId, currency, ...rest } = parsed.data;
+  // Store "same as the trip" as null, so it follows the trip's currency.
+  const trip = await db.trip.findUniqueOrThrow({ where: { id: tripId }, select: { currency: true } });
+  const data = { ...rest, currency: currency === trip.currency ? null : currency };
 
   // The chosen stop must be on this trip.
   if (stopId) {

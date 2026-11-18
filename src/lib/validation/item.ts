@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CURRENCY_CODES } from "@/lib/currencies";
 import { ITEM_CATEGORIES, LINK_KINDS } from "@/lib/item-categories";
 import { ITEM_STATUSES } from "@/lib/status";
 import { atTime } from "@/lib/dates";
@@ -37,6 +38,12 @@ export const itemSchema = z
     fromPlace: optionalText(150),
     toPlace: optionalText(150),
     cost: optionalMoney,
+    /** "" or missing = the trip's currency */
+    currency: z
+      .string()
+      .optional()
+      .refine((v) => !v || (CURRENCY_CODES as readonly string[]).includes(v), "Pick a currency from the list")
+      .transform((v) => v || null),
     status: z.enum(ITEM_STATUSES),
     confirmationCode: optionalText(100),
     notes: optionalText(2000),
@@ -74,6 +81,7 @@ export const itemSchema = z
     fromPlace: v.fromPlace,
     toPlace: v.toPlace,
     cost: v.cost,
+    currency: v.currency,
     status: v.status,
     confirmationCode: v.confirmationCode,
     notes: v.notes,

@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { summariseBudget, type BudgetLevel } from "@/lib/budget";
 import { plural } from "@/lib/format";
 import { CATEGORY_META } from "@/lib/item-categories";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, formatPrice } from "@/lib/money";
+import { RATES_CREDIT } from "@/lib/rates-fetch";
 import { STATUS_META } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
@@ -56,7 +57,10 @@ export function BudgetView({
   const money = (n: number) => formatMoney(n, currency);
   /** Averages read better rounded: "$111", not "$111.04" */
   const whole = (n: number) => formatMoney(n, currency, { compact: true });
-  const s = summariseBudget(items, stops, { budget, travellers, durationDays });
+  // Budget maths uses every price converted into the trip's currency.
+  const priced = items.map((i) => ({ ...i, originalCost: i.cost, cost: i.costInTripCurrency }));
+  const s = summariseBudget(priced, stops, { budget, travellers, durationDays });
+  const anyForeign = items.some((i) => i.currency && i.currency !== currency && i.cost);
   const level = LEVEL_STYLE[s.level];
 
   if (items.length === 0 && budget === null && readOnly) {
@@ -142,6 +146,15 @@ export function BudgetView({
         </dl>
         <p className="text-xs text-muted-foreground">
           Costs are totals for everyone on the trip, in {currency}.
+          {anyForeign ? (
+            <>
+              {" "}Prices in other currencies are converted at today&apos;s rates (
+              <a href={RATES_CREDIT.href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                {RATES_CREDIT.label}
+              </a>
+              ).
+            </>
+          ) : null}
           {s.missingCost > 0 ? ` ${plural(s.missingCost, "item")} without a price ${s.missingCost === 1 ? "isn't" : "aren't"} counted.` : ""}
         </p>
       </section>
@@ -259,7 +272,14 @@ export function BudgetView({
                         </span>
                       )}
                     </span>
-                    <span className="shrink-0 font-medium tabular-nums">{money(item.cost!)}</span>
+                    <span className="shrink-0 text-right font-medium tabular-nums">
+                      <span className="block">{money(item.cost!)}</span>
+                      {item.currency && item.currency !== currency && item.originalCost !== null ? (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {formatPrice(item.originalCost, item.currency)}
+                        </span>
+                      ) : null}
+                    </span>
                   </Tappable>
                 </li>
               );

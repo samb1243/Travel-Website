@@ -1,5 +1,6 @@
 "use server";
 
+import { getRates } from "@/server/rates";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -28,7 +29,7 @@ export async function createTrip(_prev: TripFormState, formData: FormData): Prom
     data: { ...parsed.data, ownerId: user.id, slug: makeTripSlug(parsed.data.title) },
     select: { id: true },
   });
-  await refreshTripSummary(db, trip.id);
+  await refreshTripSummary(db, trip.id, (await getRates()).table);
 
   revalidatePath("/dashboard");
   redirect(`/trips/${trip.id}`);
@@ -44,8 +45,19 @@ export async function updateTrip(
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
 
   // The slug is deliberately left alone so existing share links keep working.
-  await db.trip.update({ where: { id: tripId }, data: parsed.data });
-  await refreshTripSummary(db, tripId);
+  const before = await db.trip.findUniqueOrThrow({ where: { id: tripId }, select: { currency: true } });
+  const newCurrency = parsed.data.currency;
+  await db.$transaction(async (tx) => {
+    if (newCurrency !== before.currency) {
+      // Prices without their own currency were in the old trip currency: keep them
+      // that way (a $100 hostel stays $100, converted), rather than letting them
+      // silently become €100. Prices already in the new currency need no tag.
+      await tx.item.updateMany({ where: { tripId, currency: null }, data: { currency: before.currency } });
+      await tx.item.updateMany({ where: { tripId, currency: newCurrency }, data: { currency: null } });
+    }
+    await tx.trip.update({ where: { id: tripId }, data: parsed.data });
+  });
+  await refreshTripSummary(db, tripId, (await getRates()).table);
 
   revalidatePath("/dashboard");
   revalidatePath(`/trips/${tripId}`, "layout");

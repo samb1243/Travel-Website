@@ -1,5 +1,6 @@
 "use client";
 
+import { ItemPrice } from "@/components/builder/item-price";
 import { CategoryLegend, CategoryTile } from "@/components/builder/category-tile";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -13,7 +14,6 @@ import { parseDateOnly } from "@/lib/dates";
 import { formatDate, formatItemWhen } from "@/lib/format";
 import { CATEGORY_META, LINK_KIND_META, linkButtonLabel } from "@/lib/item-categories";
 import { buildItinerary, MAX_DAYS, type DayEntry, type ItineraryDay, type Night } from "@/lib/itinerary";
-import { formatPrice } from "@/lib/money";
 import { STATUS_META } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
@@ -308,9 +308,7 @@ function Entry({
           <span className="min-w-0 flex-1">
             <span className="flex items-start justify-between gap-2">
               <span className="font-medium text-pretty">{item.title}</span>
-              {item.cost !== null && kind !== "end" ? (
-                <span className="shrink-0 text-sm tabular-nums text-muted-foreground">{formatPrice(item.cost, currency)}</span>
-              ) : null}
+              {kind !== "end" ? <ItemPrice item={item} tripCurrency={currency} className="text-sm text-muted-foreground" /> : null}
             </span>
             {details ? <span className="block text-sm text-muted-foreground">{details}</span> : null}
             {showStatus && (item.status === "TO_BOOK" || item.status === "PAY_ON_ARRIVAL") ? (

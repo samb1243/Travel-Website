@@ -60,7 +60,7 @@ run when `NODE_ENV=production`, because the demo password is published here.
 
 | Trip                                       | Owner                | Visibility | Shows off                                     |
 | ------------------------------------------ | -------------------- | ---------- | --------------------------------------------- |
-| Three weeks in Thailand, Laos & Vietnam    | maya@example.com     | public     | overland transport, visas, mixed statuses     |
+| Three weeks in Thailand, Laos & Vietnam    | maya@example.com     | public     | overland, visas, statuses, baht & đồng prices |
 | Two weeks by train: Amsterdam to Budapest  | lukas@example.com    | public     | rail pass, 2 travellers, 5 countries          |
 | Tour du Mont Blanc: 8 stages, 3 countries  | sophie@example.com   | public     | hut-to-hut hiking stages, gear, cash-only huts|
 | Japan in cherry blossom season (draft)     | maya@example.com     | **private**| must never appear in Explore or share links   |
@@ -176,8 +176,19 @@ Signing in with Google using the same email as an existing password account link
 
 ### Budget
 
-- One currency per trip (set when you create or edit it). All sums are done in whole cents,
-  so totals never drift.
+- Each trip has a main currency (set when you create or edit it). All sums are done in whole
+  cents, so totals never drift.
+- **Prices in other currencies:** next to an item's cost, pick the currency you'll actually
+  pay in (e.g. THB 1,000 for a cooking class on a USD trip). The item shows "THB 1,000 ≈ $29.57",
+  and the budget converts it into the trip's currency at today's rate. Change the trip's
+  currency later and every price keeps the currency it was entered in.
+- Rates come from [ExchangeRate-API](https://www.exchangerate-api.com)'s free open endpoint
+  (no key, updated daily; "Rates by Exchange Rate API" is credited on the Budget tab). Only
+  "today's euro rates" is requested, nothing about users or trips. The app keeps the latest
+  rates in the `ExchangeRateSnapshot` table and in memory, refreshes them every 12 hours,
+  and falls back to the last stored rates, then to rough built-in ones (`src/lib/fx.ts`),
+  if the service can't be reached. Set `EXCHANGE_RATES_URL` to use another source with the
+  same response format.
 - Planned spend against your budget, with a bar that turns amber at 90% and red when over,
   plus what's left (or how much you're over).
 - Per person, per day, and per person per day. Costs are totals for the whole group, so
@@ -211,7 +222,7 @@ results cached for a day, and 30 searches per user per minute. Set `NOMINATIM_US
   visible to anyone who can see the trip.
 - **Explore** (`/explore`) lists public trips, newest first, with filters for type, length,
   budget per person and country. Filters live in the URL, so a filtered view can be shared.
-  Budgets are compared using rough built-in exchange rates (`src/lib/fx.ts`), only for
+  Budgets are compared in euros, converted when the trip was last changed, only for
   filtering; trips always show their own currency.
 - **Save** keeps someone's trip under "Saved from Explore" on My trips. If its owner makes it
   private, it disappears from your list.
@@ -354,8 +365,6 @@ The code leaves room for each of these:
 - **Recommendations:** stops store a stable OpenStreetMap place id (`Stop.placeId`) so trips
   through the same place can be matched; add a recommendations service behind a small
   interface, like place search in `src/server/geocode.ts`.
-- **Multi-currency:** `Item.currency` is already in the schema (null = trip currency); replace
-  the rough rates in `src/lib/fx.ts` with live ones and convert in the budget maths.
 - **Parse booking emails** into items (forwarding address + parser), and a **PWA with
   offline access** for the itinerary and confirmation numbers.
 
@@ -390,8 +399,9 @@ src/app/               routes (App Router): /trips/[id]/*, /t/[slug], /explore, 
 src/components/        UI: builder/, itinerary/, checklist/, map/, budget/, shared/, trip/
 src/components/ui/     shadcn/ui primitives
 src/lib/               pure logic (unit-tested): validation, itinerary, checklist, budget,
-                       sharing, explore filters, money, dates, formatting
-src/server/            session, permissions, read queries, server actions, rate limits
+                       sharing, explore filters, money, currency conversion, dates, formatting
+src/server/            session, permissions, read queries, server actions, rate limits,
+                       exchange rates
 src/proxy.ts           fast redirect to /login for signed-out visitors
 src/generated/         Prisma client (generated, not committed)
 test/integration/      permission, privacy and validation tests (real database)

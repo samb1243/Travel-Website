@@ -31,3 +31,23 @@ export function formatMoney(amount: MoneyLike, currency: string, opts?: { compac
     maximumFractionDigits: opts?.compact || Number.isInteger(n) ? 0 : 2,
   }).format(n);
 }
+
+/**
+ * A booking's price for display: in its own currency, plus the trip-currency
+ * equivalent when they differ. { main: "¥14,000", converted: "≈ $95" }
+ */
+export function itemPriceParts(
+  cost: number | null,
+  itemCurrency: string | null,
+  tripCurrency: string,
+  costInTripCurrency: number | null,
+): { main: string; converted: string | null } | null {
+  if (cost === null) return null;
+  const own = itemCurrency ?? tripCurrency;
+  const main = formatPrice(cost, own);
+  const converted =
+    own !== tripCurrency && cost !== 0 && costInTripCurrency !== null
+      ? `≈ ${formatMoney(costInTripCurrency, tripCurrency, { compact: costInTripCurrency >= 100 })}`
+      : null;
+  return { main, converted };
+}

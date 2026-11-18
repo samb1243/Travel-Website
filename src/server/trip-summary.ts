@@ -4,17 +4,21 @@
 
 import type { PrismaClient } from "@/generated/prisma/client";
 import { daysBetween } from "@/lib/dates";
-import { approxEur } from "@/lib/fx";
+import { APPROX_RATES, convertAmount, costInTripCurrency, type RateTable } from "@/lib/convert";
+import { toCents, fromCents } from "@/lib/money";
 import { sumMoney, type MoneyLike } from "@/lib/money";
 
 export type SummaryInput = {
   startDate: Date | null;
   endDate: Date | null;
   stops: { countryCode: string | null; arriveOn: Date | null; departOn: Date | null }[];
-  items: { cost: MoneyLike | null }[];
+  /** currency null = priced in the trip's currency */
+  items: { cost: MoneyLike | null; currency?: string | null }[];
   /** Used for the approximate per-person euro figure Explore filters on */
   currency?: string;
   travellers?: number;
+  /** Exchange rates; the rough built-in ones if not given */
+  rates?: RateTable;
 };
 
 export type TripSummary = {
@@ -49,17 +53,20 @@ export function computeTripSummary(input: SummaryInput): TripSummary {
   ];
 
   // Every item counts, including "no booking needed" ones (walk-ins still cost money).
-  const totalCost = sumMoney(input.items.map((i) => i.cost));
+  // Bookings priced in another currency are converted into the trip's currency.
+  const tripCurrency = input.currency ?? "EUR";
+  const rates = input.rates ?? APPROX_RATES;
+  const totalCost = sumMoney(input.items.map((i) => costInTripCurrency(i.cost, i.currency ?? null, tripCurrency, rates)));
 
-  const perPerson = totalCost / Math.max(1, input.travellers ?? 1);
-  const costPerPersonEur = approxEur(perPerson, input.currency ?? "EUR");
+  const perPerson = fromCents(Math.round(toCents(totalCost) / Math.max(1, input.travellers ?? 1)));
+  const costPerPersonEur = convertAmount(perPerson, tripCurrency, "EUR", rates);
 
   return { durationDays, countryCodes, totalCost, costPerPersonEur };
 }
 
 type Db = Pick<PrismaClient, "trip">;
 
-export async function refreshTripSummary(db: Db, tripId: string): Promise<TripSummary> {
+export async function refreshTripSummary(db: Db, tripId: string, rates?: RateTable): Promise<TripSummary> {
   const trip = await db.trip.findUniqueOrThrow({
     where: { id: tripId },
     select: {
@@ -68,10 +75,10 @@ export async function refreshTripSummary(db: Db, tripId: string): Promise<TripSu
       currency: true,
       travellers: true,
       stops: { select: { countryCode: true, arriveOn: true, departOn: true } },
-      items: { select: { cost: true } },
+      items: { select: { cost: true, currency: true } },
     },
   });
-  const summary = computeTripSummary(trip);
+  const summary = computeTripSummary({ ...trip, rates });
   await db.trip.update({ where: { id: tripId }, data: summary });
   return summary;
 }

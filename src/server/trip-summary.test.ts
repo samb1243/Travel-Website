@@ -75,6 +75,19 @@ describe("costPerPersonEur", () => {
     expect(s.costPerPersonEur).toBe(552); // 600 USD × 0.92
   });
 
+  it("converts bookings priced in other currencies before adding them up", () => {
+    const s = computeTripSummary({
+      startDate: null,
+      endDate: null,
+      stops: [],
+      items: [{ cost: 100 }, { cost: 14000, currency: "JPY" }, { cost: 50, currency: "USD" }],
+      currency: "USD",
+      rates: { EUR: 1, USD: 1.1, JPY: 175 },
+    });
+    expect(s.totalCost).toBe(238); // $100 + ¥14,000 ($88) + $50
+    expect(s.costPerPersonEur).toBe(216.36);
+  });
+
   it("returns null for a currency without a rate", () => {
     const s = computeTripSummary({ startDate: null, endDate: null, stops: [], items: [{ cost: 10 }], currency: "XXX" });
     expect(s.costPerPersonEur).toBeNull();

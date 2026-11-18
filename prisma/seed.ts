@@ -7,6 +7,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "better-auth/crypto";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { refreshTripSummary } from "../src/server/trip-summary";
+import { APPROX_RATES } from "../src/lib/convert";
+import { fetchLatestRates } from "../src/lib/rates-fetch";
 import { addDays, atTime, parseDateOnly } from "../src/lib/dates";
 import { makeTripSlug } from "../src/lib/slug";
 import { DEMO_PASSWORD, SEED_TRIPS, SEED_USERS, type SeedItem } from "./seed-data";
@@ -38,6 +40,7 @@ function itemData(item: SeedItem, tripStart: Date, position: number) {
     fromPlace: item.from ?? null,
     toPlace: item.to ?? null,
     cost: item.cost ?? null,
+    currency: item.currency ?? null,
     status: item.status,
     confirmationCode: item.confirmationCode ?? null,
     notes: item.notes ?? null,
@@ -79,6 +82,11 @@ async function main() {
     });
   }
   console.log(`Demo logins: ${SEED_USERS.map((u) => u.email).join(", ")} / password "${DEMO_PASSWORD}"`);
+
+  // Live exchange rates for the demo trips' foreign-currency bookings (rough built-in ones offline)
+  const rates = await fetchLatestRates()
+    .then((r) => r.table)
+    .catch(() => APPROX_RATES);
 
   const deleted = await db.trip.deleteMany({ where: { ownerId: { in: [...users.values()] } } });
   if (deleted.count) console.log(`Removed ${deleted.count} existing demo trips`);
@@ -138,7 +146,7 @@ async function main() {
       });
     }
 
-    const summary = await refreshTripSummary(db, trip.id);
+    const summary = await refreshTripSummary(db, trip.id, rates);
     console.log(
       `✓ ${t.title} [${t.visibility.toLowerCase()}]: ${t.stops.length} stops, ` +
         `${summary.durationDays} days, ${summary.countryCodes.join("/")}, ` +

@@ -5,6 +5,8 @@ import { emptyStatusCounts, type StatusCounts } from "@/lib/status";
 import type { ItemCategory, ItemStatus, LinkKind, TripType, Visibility } from "@/generated/prisma/enums";
 import { toDateOnly } from "@/lib/dates";
 import { editableBy } from "@/server/permissions";
+import { getRates } from "@/server/rates";
+import { APPROX_RATES, costInTripCurrency } from "@/lib/convert";
 
 // Read-side data access for trips. Everything returned here is plain,
 // serialisable data (Decimals become numbers) that's safe to pass to
@@ -132,7 +134,12 @@ export type BuilderItem = {
   allDay: boolean;
   fromPlace: string | null;
   toPlace: string | null;
+  /** In the item's own currency (see `currency`) */
   cost: number | null;
+  /** The price's currency; null = the trip's currency */
+  currency: string | null;
+  /** `cost` converted into the trip's currency at today's rate (same as cost when no currency) */
+  costInTripCurrency: number | null;
   status: ItemStatus;
   confirmationCode: string | null;
   notes: string | null;
@@ -179,11 +186,14 @@ export async function getTripBuilderData(tripId: string, userId: string) {
         },
       },
       _count: { select: { members: true } },
+      currency: true,
     },
   });
   if (!trip) return null;
 
   const groupTrip = trip._count.members > 0;
+  // Rates only matter when something is priced in another currency.
+  const rates = trip.items.some((i) => i.currency && i.currency !== trip.currency) ? (await getRates()).table : APPROX_RATES;
   const items = [...trip.items].sort(byTime).map(
     (i): BuilderItem => ({
       id: i.id,
@@ -197,6 +207,8 @@ export async function getTripBuilderData(tripId: string, userId: string) {
       fromPlace: i.fromPlace,
       toPlace: i.toPlace,
       cost: i.cost === null ? null : Number(i.cost),
+      currency: i.currency,
+      costInTripCurrency: costInTripCurrency(i.cost, i.currency, trip.currency, rates),
       status: i.status,
       confirmationCode: i.confirmationCode,
       notes: i.notes,

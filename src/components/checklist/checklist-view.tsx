@@ -1,5 +1,6 @@
 "use client";
 
+import { ItemPrice } from "@/components/builder/item-price";
 import { CategoryTile } from "@/components/builder/category-tile";
 import Link from "next/link";
 import { useOptimistic, useState, useTransition } from "react";
@@ -30,7 +31,6 @@ import {
 import { formatDate, formatItemWhen, plural } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 import { linkButtonLabel } from "@/lib/item-categories";
-import { formatPrice } from "@/lib/money";
 import { ITEM_STATUSES, STATUS_META, type ItemStatus } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { setItemStatus } from "@/server/actions/builder";
@@ -270,9 +270,7 @@ function ChecklistRow({
                 {item.title}
               </span>
             </span>
-            {item.cost !== null ? (
-              <span className="shrink-0 text-sm font-medium tabular-nums">{formatPrice(item.cost, currency)}</span>
-            ) : null}
+            <ItemPrice item={item} tripCurrency={currency} className="text-sm font-medium" />
           </button>
           <p className="mt-0.5 pl-6 text-sm text-muted-foreground">
             {[

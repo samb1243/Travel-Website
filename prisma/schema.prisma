@@ -325,3 +325,15 @@ model CalendarFeed {
 
   @@index([tripId, userId])
 }
+
+/// One day's exchange rates (units of each currency per 1 EUR), fetched from
+/// ExchangeRate-API at most about twice a day. Used to convert bookings priced
+/// in another currency into the trip's currency (src/server/rates.ts).
+model ExchangeRateSnapshot {
+  /// "YYYY-MM-DD" of the rates (the provider's update day)
+  day       String   @id
+  rates     Json
+  fetchedAt DateTime @default(now())
+
+  @@index([fetchedAt])
+}

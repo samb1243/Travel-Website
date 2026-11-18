@@ -1,5 +1,6 @@
 "use server";
 
+import { getRates } from "@/server/rates";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -95,12 +96,13 @@ export async function copyTrip(tripId: string, input: { startDate: string }): Pr
     newId: randomUUID,
   });
 
+  const { table: rates } = await getRates();
   await db.$transaction(async (tx) => {
     await tx.trip.create({ data: plan.trip });
     if (plan.stops.length) await tx.stop.createMany({ data: plan.stops });
     if (plan.items.length) await tx.item.createMany({ data: plan.items });
     if (plan.links.length) await tx.itemLink.createMany({ data: plan.links });
-    await refreshTripSummary(tx, plan.trip.id);
+    await refreshTripSummary(tx, plan.trip.id, rates);
   });
 
   revalidatePath("/dashboard");

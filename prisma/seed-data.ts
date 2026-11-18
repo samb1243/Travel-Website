@@ -18,6 +18,8 @@ export type SeedItem = {
   from?: string;
   to?: string;
   cost?: number;
+  /** Priced in another currency than the trip's (e.g. local cash prices) */
+  currency?: string;
   status: ItemStatus;
   confirmationCode?: string;
   notes?: string;
@@ -237,7 +239,8 @@ const southeastAsia: SeedTrip = {
           title: "Thai cooking class (morning, with market tour)",
           start: [7, "09:00"],
           end: [7, "13:00"],
-          cost: 30,
+          cost: 1000,
+          currency: "THB",
           status: "TO_BOOK",
         },
         {
@@ -257,7 +260,8 @@ const southeastAsia: SeedTrip = {
           end: [8, "12:30"],
           from: "Chiang Mai Arcade Bus Station",
           to: "Pai",
-          cost: 7,
+          cost: 250,
+          currency: "THB",
           status: "TO_BOOK",
           notes: "762 curves: take motion-sickness tablets and sit up front.",
           links: [booking("https://12go.asia/en/travel/chiang-mai/pai")],
@@ -482,7 +486,8 @@ const southeastAsia: SeedTrip = {
           title: "Ha Long Bay day cruise",
           start: [17, "07:30"],
           end: [17, "20:00"],
-          cost: 65,
+          cost: 1650000,
+          currency: "VND",
           status: "TO_BOOK",
           notes: "Pick a cruise that includes kayaking; Lan Ha Bay routes are quieter.",
         },

@@ -1,12 +1,12 @@
 "use client";
 
+import { ItemPrice } from "@/components/builder/item-price";
 import { CategoryTile } from "@/components/builder/category-tile";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ArrowRightIcon, CheckIcon, CopyIcon, LockIcon } from "lucide-react";
 import { LINK_KIND_META, linkButtonLabel } from "@/lib/item-categories";
 import { formatItemWhen } from "@/lib/format";
-import { formatPrice } from "@/lib/money";
 import { STATUS_META } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { Tappable } from "@/components/tappable";
@@ -42,9 +42,7 @@ export function ItemCard({
         <span className="min-w-0 flex-1 space-y-0.5">
           <span className="flex items-start justify-between gap-2">
             <span className="leading-snug font-bold text-pretty">{item.title}</span>
-            {item.cost !== null ? (
-              <span className="shrink-0 font-extrabold tabular-nums">{formatPrice(item.cost, currency)}</span>
-            ) : null}
+            <ItemPrice item={item} tripCurrency={currency} className="font-extrabold" />
           </span>
           {showRoute ? (
             <span className="block text-sm text-muted-foreground">

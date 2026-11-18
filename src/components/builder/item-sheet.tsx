@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CATEGORY_META, GROUP_META, ITEM_CATEGORIES, itemGroup, LINK_KIND_META, LINK_KINDS } from "@/lib/item-categories";
 import { ITEM_STATUSES, STATUS_META } from "@/lib/status";
 import { MAX_LINKS } from "@/lib/validation/item";
+import { CURRENCIES } from "@/lib/currencies";
 import { cn } from "@/lib/utils";
 import type { ItemCategory, ItemStatus, LinkKind } from "@/generated/prisma/enums";
 import { deleteItem, saveItem } from "@/server/actions/builder";
@@ -89,6 +90,8 @@ function ItemForm({
   );
   // Free = a price of 0. An empty price means "not priced yet", which the budget treats differently.
   const [free, setFree] = useState(item?.cost === 0);
+  // The price's currency; defaults to the trip's.
+  const [priceCurrency, setPriceCurrency] = useState(item?.currency ?? currency);
   const [links, setLinks] = useState<LinkRow[]>(
     item?.links.map((l) => ({ key: l.id, kind: l.kind, label: l.label ?? "", url: l.url })) ?? [],
   );
@@ -119,6 +122,7 @@ function ItemForm({
       fromPlace: meta.fields.route ? get("fromPlace") : "",
       toPlace: meta.fields.route ? get("toPlace") : "",
       cost: free ? "0" : get("cost"),
+      currency: free || priceCurrency === currency ? "" : priceCurrency,
       status,
       confirmationCode: get("confirmationCode"),
       notes: get("notes"),
@@ -251,20 +255,39 @@ function ItemForm({
       </fieldset>
 
       <div className="space-y-2">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-[1fr_auto] items-end gap-3">
           <Field
             key={free ? "free" : "paid"}
             id="cost"
             name="cost"
             inputMode="decimal"
-            label={`Cost (${currency})`}
+            label="Cost"
             placeholder={free ? "Free" : "0"}
             disabled={free}
             defaultValue={free ? "" : (item?.cost ?? "")}
             error={free ? undefined : errors.cost}
           />
-          <Field id="provider" name="provider" label={meta.labels.provider} defaultValue={item?.provider ?? ""} error={errors.provider} />
+          <div className="space-y-2">
+            <Label htmlFor="priceCurrency" className="sr-only">
+              Currency
+            </Label>
+            <Select value={priceCurrency} onValueChange={setPriceCurrency} disabled={free}>
+              <SelectTrigger id="priceCurrency" aria-label="Currency" className="w-28 rounded-lg text-base font-semibold data-[size=default]:h-12 md:text-sm">
+                {/* Just the code here; the list shows the full names */}
+                <SelectValue>{priceCurrency}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code} className="min-h-10">
+                    <span className="font-semibold">{c.code}</span>
+                    <span className="text-muted-foreground">{c.name}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+        {errors.currency ? <p className="text-sm text-destructive">{errors.currency}</p> : null}
         <label
           className={cn(
             "inline-flex min-h-11 cursor-pointer items-center gap-2.5 rounded-full border px-4 text-sm font-medium transition-colors has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
@@ -284,7 +307,14 @@ function ItemForm({
         <p className="text-xs text-muted-foreground">
           {free ? "Counts as free in the budget." : "Total for everyone travelling, not per person. Leave it empty if you don't know yet."}
         </p>
+        {priceCurrency !== currency && !free ? (
+          <p className="text-xs text-muted-foreground">
+            Shown in {priceCurrency}, and converted to {currency} for the budget at today&apos;s rate.
+          </p>
+        ) : null}
       </div>
+
+      <Field id="provider" name="provider" label={meta.labels.provider} defaultValue={item?.provider ?? ""} error={errors.provider} />
 
       {/* Links */}
       <fieldset className="min-w-0 space-y-2">
