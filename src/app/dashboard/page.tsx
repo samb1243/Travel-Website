@@ -40,11 +40,12 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "search
   return (
     <div className="space-y-8">
       {params.deleted ? <FlashToast message="Trip deleted" /> : null}
+      {params.left ? <FlashToast message="You left the trip" /> : null}
 
       <div className="flex items-end justify-between gap-4">
         <div>
           <p className="text-muted-foreground">Hi {firstName} 👋</p>
-          <h1 className="font-heading text-3xl font-semibold tracking-tight">My trips</h1>
+          <h1 className="font-heading text-4xl leading-none font-black tracking-[-0.02em] md:text-5xl">My trips</h1>
         </div>
         {trips.length ? (
           <Button asChild size="lg" className="h-11">
@@ -86,12 +87,12 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "search
       {saved.length ? (
         <section className="space-y-4">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-heading text-xl font-semibold">Saved from Explore</h2>
+            <h2 className="font-heading text-xl font-extrabold">Saved from Explore</h2>
             <Link href="/explore" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
               Find more
             </Link>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {saved.map((t) => (
               <ExploreTripCard key={t.id} trip={t} />
             ))}
@@ -105,8 +106,8 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "search
 function TripGrid({ title, trips, today }: { title: string; trips: TripCardData[]; today: Date }) {
   return (
     <section className="space-y-4">
-      <h2 className="font-heading text-xl font-semibold">{title}</h2>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <h2 className="font-heading text-xl font-extrabold">{title}</h2>
+      <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
         {trips.map((t) => (
           <TripCard key={t.id} trip={t} today={today} />
         ))}
@@ -119,7 +120,7 @@ function DashboardSkeleton() {
   return (
     <div className="space-y-8" aria-hidden>
       <Skeleton className="h-14 w-48" />
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
         {[0, 1, 2].map((i) => (
           <Skeleton key={i} className="aspect-[4/5] w-full rounded-3xl" />
         ))}

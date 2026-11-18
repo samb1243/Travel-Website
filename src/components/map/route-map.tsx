@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-const PIN = "route-pin grid size-8 place-items-center rounded-full border-2 border-white bg-primary text-sm font-bold text-primary-foreground shadow-md transition-transform";
+const PIN = "route-pin grid size-8 place-items-center rounded-full border-[3px] border-[#1c3a32] bg-trail text-sm font-extrabold text-trail-foreground transition-transform";
 const PIN_SELECTED = "route-pin-selected";
 
 export function RouteMap({

@@ -72,7 +72,7 @@ export function ProfileForm({
       <div className="space-y-2">
         <Label htmlFor="homeCurrency">Home currency</Label>
         <Select name="homeCurrency" value={currency} onValueChange={setCurrency}>
-          <SelectTrigger id="homeCurrency" className="h-12 w-full text-base md:text-sm">
+          <SelectTrigger id="homeCurrency" className="w-full text-base data-[size=default]:h-12 md:text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

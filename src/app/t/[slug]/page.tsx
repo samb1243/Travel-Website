@@ -10,9 +10,9 @@ import { UserAvatar } from "@/components/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseDateOnly, toDateOnly } from "@/lib/dates";
-import { flagEmoji, formatDateRange, plural } from "@/lib/format";
+import { formatDateRange, plural } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
-import { TRIP_TYPE_META, VISIBILITY_META } from "@/lib/trip-types";
+import { formatTripTypes, primaryTripType, TRIP_TYPE_META, VISIBILITY_META } from "@/lib/trip-types";
 import { getCurrentUser } from "@/server/session";
 import { getSharedTrip } from "@/server/shared-trips";
 
@@ -60,7 +60,8 @@ async function SharedTripContent({ params }: { params: Promise<{ slug: string }>
   if (!data) notFound(); // private or missing: same answer either way
 
   const { trip } = data;
-  const typeMeta = TRIP_TYPE_META[trip.type];
+  const typeMeta = TRIP_TYPE_META[primaryTripType(trip.types)];
+  const TypeIcon = typeMeta.icon;
   const vis = VISIBILITY_META[trip.visibility];
   const dates = formatDateRange(
     trip.startDate ? parseDateOnly(trip.startDate) : null,
@@ -70,12 +71,12 @@ async function SharedTripContent({ params }: { params: Promise<{ slug: string }>
 
   return (
     <div className="space-y-6">
-      {data.isOwner ? (
+      {data.canEdit ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-sm">
           <p className="flex items-center gap-2">
             <EyeIcon className="size-4 shrink-0 text-primary" aria-hidden />
             {trip.visibility === "PRIVATE"
-              ? "Preview: this trip is private, so only you can see this page."
+              ? "Preview: this trip is private, so only you and the people planning it can see this page."
               : `This is what others see. ${vis.label}: ${vis.description.toLowerCase()}.`}
           </p>
           <Button asChild size="sm" variant="outline" className="h-9">
@@ -86,43 +87,43 @@ async function SharedTripContent({ params }: { params: Promise<{ slug: string }>
         </div>
       ) : null}
 
-      <div className="relative -mx-4 overflow-hidden sm:mx-0 sm:rounded-3xl">
-        <TripCover type={trip.type} coverImageUrl={trip.coverImageUrl} priority className="aspect-[16/9] sm:aspect-[21/8]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/0" />
-        <div className="absolute right-4 bottom-4 left-4 text-white sm:right-6 sm:left-6">
-          <p className="text-xs font-medium tracking-wide text-white/85 uppercase">{typeMeta.label}</p>
-          <h1 className="font-heading text-2xl leading-tight font-semibold text-balance sm:text-4xl">{trip.title}</h1>
-        </div>
+      <div className="relative overflow-hidden rounded-3xl">
+        <TripCover types={trip.types} coverImageUrl={trip.coverImageUrl} priority className="aspect-[5/2] sm:aspect-[21/7]" />
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-3">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0 space-y-3">
+          <h1 className="font-heading text-[2rem] leading-[0.98] font-black tracking-[-0.02em] text-balance sm:text-5xl">
+            {trip.title}
+          </h1>
           <p className="flex items-center gap-2.5">
             <UserAvatar name={trip.authorName} image={trip.authorImage} className="size-8" />
             <span>
-              by <span className="font-medium">{trip.authorName}</span>
+              by <span className="font-bold">{trip.authorName}</span>
               {trip.copiedFromAuthor ? (
-                <span className="text-muted-foreground"> · based on {trip.copiedFromAuthor}&apos;s trip</span>
+                <span className="text-muted-foreground">, based on {trip.copiedFromAuthor}&apos;s trip</span>
               ) : null}
             </span>
           </p>
-          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-semibold text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <CalendarIcon className="size-4" aria-hidden />
               {dates ?? "No dates"}
-              {trip.durationDays ? ` · ${plural(trip.durationDays, "day")}` : ""}
+              {trip.durationDays ? <span className="font-normal">({plural(trip.durationDays, "day")})</span> : null}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <TypeIcon className="size-4" aria-hidden /> {formatTripTypes(trip.types, 4)}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <MapPinIcon className="size-4" aria-hidden />
               {plural(data.stops.length, "stop")}
-              {trip.countryCodes.length ? ` · ${trip.countryCodes.map(flagEmoji).join(" ")}` : ""}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <UsersIcon className="size-4" aria-hidden />
               {plural(trip.travellers, "traveller")}
             </span>
             {trip.totalCost > 0 ? (
-              <span className="font-medium text-foreground">
+              <span className="font-extrabold text-foreground">
                 {formatMoney(trip.totalCost, trip.currency)}
                 {perPerson !== null ? ` (${formatMoney(perPerson, trip.currency, { compact: true })} pp)` : ""}
               </span>
@@ -152,7 +153,7 @@ async function SharedTripContent({ params }: { params: Promise<{ slug: string }>
 function SharedTripSkeleton() {
   return (
     <div className="space-y-6" aria-hidden>
-      <Skeleton className="-mx-4 aspect-[16/9] rounded-none sm:mx-0 sm:aspect-[21/8] sm:rounded-3xl" />
+      <Skeleton className="aspect-[5/2] rounded-3xl sm:aspect-[21/7]" />
       <Skeleton className="h-24 w-full rounded-2xl" />
       <Skeleton className="h-96 w-full rounded-2xl" />
     </div>

@@ -2,21 +2,22 @@
 
 import Link from "next/link";
 import { startTransition, useActionState, useState, type FormEvent } from "react";
-import { ChevronDownIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { Field, FormError, SubmitButton } from "@/components/auth/form-bits";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CURRENCIES } from "@/lib/currencies";
-import { TRIP_TYPE_META, TRIP_TYPES } from "@/lib/trip-types";
+import { MAX_TRIP_TYPES, normaliseTripTypes, TRIP_TYPE_META, TRIP_TYPES } from "@/lib/trip-types";
 import { cn } from "@/lib/utils";
 import type { TripType } from "@/generated/prisma/enums";
 import type { TripFormState } from "@/server/actions/trips";
 
 export type TripFormDefaults = {
   title: string;
-  type: TripType;
+  /** May be empty for a new trip: the user picks */
+  types: TripType[];
   startDate: string;
   endDate: string;
   currency: string;
@@ -38,7 +39,12 @@ export function TripForm({
   cancelHref: string;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
-  const [type, setType] = useState<TripType>(defaults.type);
+  const [types, setTypes] = useState<TripType[]>(defaults.types);
+  const toggleType = (t: TripType) =>
+    setTypes((current) =>
+      current.includes(t) ? current.filter((x) => x !== t) : normaliseTripTypes([...current, t]),
+    );
+  const full = types.length >= MAX_TRIP_TYPES;
   const [currency, setCurrency] = useState(defaults.currency);
   const errors = state.errors ?? {};
   // Open "More details" up front when editing, or when one of its fields has an error.
@@ -67,36 +73,46 @@ export function TripForm({
         error={errors.title}
       />
 
-      <fieldset className="min-w-0 space-y-2">
-        <legend className="mb-2 text-sm font-medium">Type of trip</legend>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <fieldset className="min-w-0 space-y-2" aria-describedby="types-hint">
+        <legend className="text-sm font-medium">Type of trip</legend>
+        <p id="types-hint" className="text-sm text-muted-foreground">
+          Pick all that fit, up to {MAX_TRIP_TYPES}. People filter by these on Explore.
+        </p>
+        <div className="flex flex-wrap gap-2 pt-1">
           {TRIP_TYPES.map((t) => {
             const meta = TRIP_TYPE_META[t];
             const Icon = meta.icon;
+            const on = types.includes(t);
+            const disabled = !on && full;
             return (
               <label
                 key={t}
+                title={meta.description}
                 className={cn(
-                  "flex cursor-pointer flex-col gap-1 rounded-xl border bg-card p-3 transition-colors has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
-                  type === t ? "border-primary bg-primary/5" : "hover:bg-accent",
+                  "inline-flex min-h-11 items-center gap-2 rounded-xl border px-3.5 text-sm font-semibold transition-colors has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
+                  on
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : disabled
+                      ? "cursor-not-allowed bg-card text-muted-foreground opacity-50"
+                      : "cursor-pointer bg-card hover:bg-accent",
                 )}
               >
                 <input
-                  type="radio"
-                  name="type"
+                  type="checkbox"
+                  name="types"
                   value={t}
-                  checked={type === t}
-                  onChange={() => setType(t)}
+                  checked={on}
+                  disabled={disabled}
+                  onChange={() => toggleType(t)}
                   className="sr-only"
                 />
-                <Icon className={cn("size-5", type === t ? "text-primary" : "text-muted-foreground")} aria-hidden />
-                <span className="text-sm font-medium">{meta.label}</span>
-                <span className="text-xs text-muted-foreground">{meta.description}</span>
+                {on ? <CheckIcon className="size-4" strokeWidth={3} aria-hidden /> : <Icon className="size-4" aria-hidden />}
+                {meta.label}
               </label>
             );
           })}
         </div>
-        {errors.type ? <p className="text-sm text-destructive">{errors.type}</p> : null}
+        {errors.types ? <p className="text-sm text-destructive">{errors.types}</p> : null}
       </fieldset>
 
       <div className="grid grid-cols-2 gap-3">
@@ -132,7 +148,7 @@ export function TripForm({
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
               <Select name="currency" value={currency} onValueChange={setCurrency}>
-                <SelectTrigger id="currency" className="h-12 w-full text-base md:text-sm">
+                <SelectTrigger id="currency" className="w-full text-base data-[size=default]:h-12 md:text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

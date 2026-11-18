@@ -17,7 +17,7 @@ export function EmptyState({
       <span className="mb-4 grid size-12 place-items-center rounded-full bg-muted">
         <Icon className="size-6 text-muted-foreground" aria-hidden />
       </span>
-      <h2 className="font-heading text-lg font-semibold">{title}</h2>
+      <h2 className="font-heading text-lg font-extrabold">{title}</h2>
       {children ? (
         <p className="mt-1 max-w-sm text-sm text-muted-foreground">{children}</p>
       ) : null}

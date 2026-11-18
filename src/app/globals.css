@@ -4,12 +4,29 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Country flag emoji. Windows has no flag glyphs and shows "GB" instead of a flag,
+   so serve a small flags-only font (Twemoji Country Flags, via TalkJS's
+   country-flag-emoji-polyfill; artwork by Twitter, CC-BY 4.0). unicode-range
+   limits it to flag characters, so it never replaces Overpass. */
+@font-face {
+  font-family: "Twemoji Country Flags";
+  src: url("/fonts/TwemojiCountryFlags.woff2") format("woff2");
+  unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;
+  font-display: swap;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-display);
+  /* Flags first: that font only covers flag characters (see @font-face below),
+     so everything else falls through to Overpass. */
+  --font-sans: "Twemoji Country Flags", var(--font-overpass), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-code);
+  --font-heading: "Twemoji Country Flags", var(--font-overpass), ui-sans-serif, system-ui, sans-serif;
+  /* The route: trail-sign yellow, used only for the route line, stop markers and signposts */
+  --color-trail: var(--trail);
+  --color-trail-foreground: var(--trail-foreground);
+  --color-lake: var(--lake);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,85 +56,92 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Rounding follows importance: photos (3xl) > cards (2xl) > controls (lg) */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.3);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-3xl: calc(var(--radius) * 2.4);
+  --radius-4xl: calc(var(--radius) * 3);
 }
 
-/* "Golden hour" palette: limestone cream, espresso text, terracotta accent.
+/* "Trail signpost": glacier background, pine ink, trail-sign yellow for the route.
    Status colours (booked / pay on arrival / to book) live in src/lib/status.ts. */
 :root {
-  --background: oklch(0.982 0.008 85);
-  --foreground: oklch(0.24 0.02 50);
-  --card: oklch(0.996 0.004 85);
-  --card-foreground: oklch(0.24 0.02 50);
-  --popover: oklch(0.996 0.004 85);
-  --popover-foreground: oklch(0.24 0.02 50);
-  --primary: oklch(0.54 0.14 38);
-  --primary-foreground: oklch(0.985 0.01 85);
-  --secondary: oklch(0.94 0.02 80);
-  --secondary-foreground: oklch(0.28 0.02 50);
-  --muted: oklch(0.95 0.012 80);
-  --muted-foreground: oklch(0.5 0.02 55);
-  --accent: oklch(0.93 0.025 75);
-  --accent-foreground: oklch(0.28 0.02 50);
-  --destructive: oklch(0.55 0.21 27);
-  --border: oklch(0.9 0.015 75);
-  --input: oklch(0.88 0.018 75);
-  --ring: oklch(0.68 0.11 45);
-  --chart-1: oklch(0.54 0.14 38);
-  --chart-2: oklch(0.55 0.1 150);
-  --chart-3: oklch(0.55 0.1 235);
-  --chart-4: oklch(0.78 0.13 80);
-  --chart-5: oklch(0.55 0.17 340);
-  --radius: 0.875rem;
-  --sidebar: oklch(0.97 0.01 80);
-  --sidebar-foreground: oklch(0.24 0.02 50);
-  --sidebar-primary: oklch(0.54 0.14 38);
-  --sidebar-primary-foreground: oklch(0.985 0.01 85);
-  --sidebar-accent: oklch(0.93 0.025 75);
-  --sidebar-accent-foreground: oklch(0.28 0.02 50);
-  --sidebar-border: oklch(0.9 0.015 75);
-  --sidebar-ring: oklch(0.68 0.11 45);
+  --background: #eef2f0; /* glacier */
+  --foreground: #1c3a32; /* pine */
+  --card: #ffffff;
+  --card-foreground: #1c3a32;
+  --popover: #ffffff;
+  --popover-foreground: #1c3a32;
+  --primary: #1c3a32;
+  --primary-foreground: #ffffff;
+  --secondary: #e1e9e5;
+  --secondary-foreground: #1c3a32;
+  --muted: #e4ebe7;
+  --muted-foreground: #5a6c66; /* lichen */
+  --accent: #e1e9e5;
+  --accent-foreground: #1c3a32;
+  --destructive: #b42318;
+  --border: #d3ddd8;
+  --input: #c3d0ca;
+  --ring: #2e6a86; /* lake */
+  --trail: #f4c430;
+  --trail-foreground: #1c3a32;
+  --lake: #2e6a86;
+  --chart-1: #1c3a32;
+  --chart-2: #2e6a86;
+  --chart-3: #f4c430;
+  --chart-4: #7a9a8f;
+  --chart-5: #b4675a;
+  --radius: 0.75rem;
+  --sidebar: #e7eeea;
+  --sidebar-foreground: #1c3a32;
+  --sidebar-primary: #1c3a32;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e1e9e5;
+  --sidebar-accent-foreground: #1c3a32;
+  --sidebar-border: #d3ddd8;
+  --sidebar-ring: #2e6a86;
 }
 
-/* "Dusk": warm charcoal with apricot accent. */
+/* "Night trail": deep pine, the same yellow for the route. */
 .dark {
-  --background: oklch(0.18 0.012 55);
-  --foreground: oklch(0.95 0.012 85);
-  --card: oklch(0.215 0.014 55);
-  --card-foreground: oklch(0.95 0.012 85);
-  --popover: oklch(0.235 0.014 55);
-  --popover-foreground: oklch(0.95 0.012 85);
-  --primary: oklch(0.76 0.12 58);
-  --primary-foreground: oklch(0.2 0.02 50);
-  --secondary: oklch(0.28 0.015 55);
-  --secondary-foreground: oklch(0.95 0.012 85);
-  --muted: oklch(0.26 0.012 55);
-  --muted-foreground: oklch(0.73 0.02 70);
-  --accent: oklch(0.3 0.02 55);
-  --accent-foreground: oklch(0.95 0.012 85);
-  --destructive: oklch(0.7 0.18 25);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.62 0.1 50);
-  --chart-1: oklch(0.76 0.12 58);
-  --chart-2: oklch(0.7 0.1 150);
-  --chart-3: oklch(0.7 0.1 235);
-  --chart-4: oklch(0.82 0.12 85);
-  --chart-5: oklch(0.7 0.15 340);
-  --sidebar: oklch(0.215 0.014 55);
-  --sidebar-foreground: oklch(0.95 0.012 85);
-  --sidebar-primary: oklch(0.76 0.12 58);
-  --sidebar-primary-foreground: oklch(0.2 0.02 50);
-  --sidebar-accent: oklch(0.3 0.02 55);
-  --sidebar-accent-foreground: oklch(0.95 0.012 85);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.62 0.1 50);
+  --background: #12241f;
+  --foreground: #e6eeea;
+  --card: #192f29;
+  --card-foreground: #e6eeea;
+  --popover: #1c352e;
+  --popover-foreground: #e6eeea;
+  --primary: #f4c430;
+  --primary-foreground: #12241f;
+  --secondary: #213b34;
+  --secondary-foreground: #e6eeea;
+  --muted: #1f3731;
+  --muted-foreground: #9db2aa;
+  --accent: #24413a;
+  --accent-foreground: #e6eeea;
+  --destructive: #f0806f;
+  --border: rgb(230 238 234 / 12%);
+  --input: rgb(230 238 234 / 18%);
+  --ring: #7fb6cf;
+  --trail: #f4c430;
+  --trail-foreground: #12241f;
+  --lake: #7fb6cf;
+  --chart-1: #f4c430;
+  --chart-2: #7fb6cf;
+  --chart-3: #e6eeea;
+  --chart-4: #7a9a8f;
+  --chart-5: #e2998b;
+  --sidebar: #192f29;
+  --sidebar-foreground: #e6eeea;
+  --sidebar-primary: #f4c430;
+  --sidebar-primary-foreground: #12241f;
+  --sidebar-accent: #24413a;
+  --sidebar-accent-foreground: #e6eeea;
+  --sidebar-border: rgb(230 238 234 / 12%);
+  --sidebar-ring: #7fb6cf;
 }
 
 @layer base {
@@ -126,17 +150,59 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 1rem;
+    line-height: 1.55;
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
   }
   html {
     @apply font-sans;
+    font-feature-settings: "tnum" 0;
+  }
+  /* Native dropdown lists (Explore filters) in the app's colours, readable in dark mode */
+  select option {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
   }
   ::selection {
-    background: color-mix(in oklch, var(--primary) 25%, transparent);
+    background: color-mix(in oklch, var(--trail) 55%, transparent);
+    color: var(--trail-foreground);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
+
+/* --- Signposts (home page) --------------------------------------------------
+   A yellow trail sign: a board with one pointed end. */
+.signpost {
+  clip-path: polygon(0 0, calc(100% - 1.5rem) 0, 100% 50%, calc(100% - 1.5rem) 100%, 0 100%);
+}
+.signpost-left {
+  clip-path: polygon(1.5rem 0, 100% 0, 100% 100%, 1.5rem 100%, 0 50%);
+}
+@keyframes signpost-swing {
+  from {
+    opacity: 0;
+    transform: rotate(var(--swing-from, -6deg)) translateX(var(--swing-x, -12px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.signpost-board {
+  transform-origin: var(--swing-origin, left center);
+  animation: signpost-swing 700ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+}
+
 /* --- Trip map (Leaflet) ------------------------------------------------------ */
 .route-map .route-line {
   stroke: var(--primary);

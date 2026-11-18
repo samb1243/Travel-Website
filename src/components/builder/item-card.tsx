@@ -1,48 +1,49 @@
 "use client";
 
+import { CategoryTile } from "@/components/builder/category-tile";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ArrowRightIcon, CheckIcon, CopyIcon, LockIcon } from "lucide-react";
-import { CATEGORY_META, LINK_KIND_META, linkButtonLabel } from "@/lib/item-categories";
+import { LINK_KIND_META, linkButtonLabel } from "@/lib/item-categories";
 import { formatItemWhen } from "@/lib/format";
 import { formatPrice } from "@/lib/money";
 import { STATUS_META } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { Tappable } from "@/components/tappable";
+import { initials } from "@/components/user-avatar";
 import type { BuilderItem } from "@/server/trips";
 
 export function ItemCard({
   item,
   currency,
   onEdit,
+  showStatus = true,
 }: {
   item: BuilderItem;
   currency: string;
   /** Omit for read-only shared views */
   onEdit?: () => void;
+  /** Booking status is the owner's own business: hidden on other people's trips */
+  showStatus?: boolean;
 }) {
-  const meta = CATEGORY_META[item.category];
   const status = STATUS_META[item.status];
-  const Icon = meta.icon;
   const when = formatItemWhen(item.startAt, item.endAt, item.allDay);
   const showRoute = item.fromPlace && item.toPlace && item.title !== `${item.fromPlace} → ${item.toPlace}`;
 
   return (
-    <div className={cn("rounded-2xl border border-l-4 bg-card", status.border)}>
+    <div className={cn("rounded-xl border bg-card", showStatus && cn("border-l-[5px]", status.border))}>
       <Tappable
         onClick={onEdit}
         label={`Edit ${item.title}`}
-        className="flex w-full items-start gap-3 rounded-2xl p-3"
+        className="flex w-full items-start gap-2.5 rounded-xl p-3"
         interactiveClassName="hover:bg-accent/40"
       >
-        <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-muted">
-          <Icon className="size-4.5 text-muted-foreground" aria-hidden />
-        </span>
+        <CategoryTile category={item.category} className="mt-0.5" />
         <span className="min-w-0 flex-1 space-y-0.5">
           <span className="flex items-start justify-between gap-2">
-            <span className="font-medium text-pretty">{item.title}</span>
+            <span className="leading-snug font-bold text-pretty">{item.title}</span>
             {item.cost !== null ? (
-              <span className="shrink-0 text-sm font-medium tabular-nums">{formatPrice(item.cost, currency)}</span>
+              <span className="shrink-0 font-extrabold tabular-nums">{formatPrice(item.cost, currency)}</span>
             ) : null}
           </span>
           {showRoute ? (
@@ -57,9 +58,12 @@ export function ItemCard({
             </span>
           ) : null}
           {item.notes ? <span className="line-clamp-3 block text-sm text-pretty whitespace-pre-line">{item.notes}</span> : null}
-          <span className={cn("mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium", status.badge)}>
-            <span aria-hidden>{status.emoji}</span> {status.label}
-          </span>
+          {showStatus ? (
+            <span className={cn("mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium", status.badge)}>
+              <span aria-hidden>{status.emoji}</span> {status.label}
+            </span>
+          ) : null}
+          <AddedBy who={item.addedBy} />
         </span>
       </Tappable>
 
@@ -74,7 +78,7 @@ export function ItemCard({
                 href={l.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-10 items-center gap-1.5 rounded-full border bg-background px-3.5 text-sm font-medium hover:bg-accent"
+                className="inline-flex h-10 items-center gap-1.5 rounded-lg border bg-background px-3 text-sm font-semibold hover:bg-accent"
               >
                 <LinkIcon className="size-4 text-muted-foreground" aria-hidden />
                 {linkButtonLabel(l)}
@@ -85,6 +89,22 @@ export function ItemCard({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** "Added by Lukas" / "Added by you", on trips planned together. */
+export function AddedBy({ who, className }: { who: BuilderItem["addedBy"]; className?: string }) {
+  if (!who) return null;
+  return (
+    <span className={cn("mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground", className)}>
+      <span
+        className="grid size-4.5 shrink-0 place-items-center rounded-full bg-muted text-[0.625rem] font-bold text-foreground"
+        aria-hidden
+      >
+        {initials(who.name)}
+      </span>
+      Added by {who.isYou ? "you" : who.name}
+    </span>
   );
 }
 
@@ -103,7 +123,7 @@ export function CopyCode({ code }: { code: string }) {
           toast.error("Couldn't copy. Long-press the code instead.");
         }
       }}
-      className="inline-flex h-10 items-center gap-1.5 rounded-full border border-dashed bg-background px-3.5 font-mono text-sm hover:bg-accent"
+      className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-dashed bg-background px-3 font-mono text-sm font-semibold hover:bg-accent"
       aria-label={`Copy confirmation number ${code}`}
     >
       {copied ? <CheckIcon className="size-4 text-emerald-600" aria-hidden /> : <CopyIcon className="size-4 text-muted-foreground" aria-hidden />}

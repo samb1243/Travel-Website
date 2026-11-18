@@ -2,12 +2,16 @@ import { z } from "zod";
 import { CURRENCY_CODES } from "@/lib/currencies";
 import { daysBetween } from "@/lib/dates";
 import { optionalDate as dateOnly, optionalMoney as money, optionalText } from "./common";
-import { TRIP_TYPES } from "@/lib/trip-types";
+import { MAX_TRIP_TYPES, normaliseTripTypes, TRIP_TYPES } from "@/lib/trip-types";
 
 export const tripSchema = z
   .object({
     title: z.string().trim().min(1, "Give your trip a name").max(100, "Keep it under 100 characters"),
-    type: z.enum(TRIP_TYPES, "Pick a trip type"),
+    types: z
+      .array(z.enum(TRIP_TYPES, "Pick from the list"))
+      .min(1, "Pick at least one type")
+      .max(MAX_TRIP_TYPES, `Pick up to ${MAX_TRIP_TYPES} types`)
+      .transform(normaliseTripTypes),
     startDate: dateOnly,
     endDate: dateOnly,
     currency: z.enum(CURRENCY_CODES, "Pick a currency from the list"),
@@ -45,7 +49,7 @@ export function tripFormValues(formData: FormData) {
   const get = (k: string) => String(formData.get(k) ?? "");
   return {
     title: get("title"),
-    type: get("type"),
+    types: formData.getAll("types").map(String),
     startDate: get("startDate"),
     endDate: get("endDate"),
     currency: get("currency"),

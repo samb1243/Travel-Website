@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { CategoryFilter, FilteredOutNote } from "@/components/builder/category-tile";
+import { countByGroup, inGroups, type ItemGroup } from "@/lib/item-categories";
 import { CalendarDaysIcon, LayoutListIcon, MapIcon, WalletIcon } from "lucide-react";
 import { ItemCard } from "@/components/builder/item-card";
 import { BudgetView } from "@/components/budget/budget-view";
@@ -8,7 +11,7 @@ import { MapView, type MapStop } from "@/components/map/map-view";
 import { EmptyState } from "@/components/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseDateOnly } from "@/lib/dates";
-import { flagEmoji, formatDateRange } from "@/lib/format";
+import { formatDateRange } from "@/lib/format";
 import type { SharedTrip } from "@/server/shared-trips";
 
 const TRIGGER = "h-10 gap-1.5 px-3";
@@ -17,6 +20,9 @@ const TRIGGER = "h-10 gap-1.5 px-3";
 export function SharedTripTabs({ data, today }: { data: SharedTrip; today: string }) {
   const { trip, stops, tripItems } = data;
   const items = [...stops.flatMap((s) => s.items), ...tripItems];
+  // Route tab filter: show only some kinds of item. Empty = everything.
+  const [groups, setGroups] = useState<ItemGroup[]>([]);
+  const show = (list: typeof items) => list.filter((i) => inGroups(i.category, groups));
   const mapStops: MapStop[] = stops.map((s) => ({
     id: s.id,
     name: s.name,
@@ -53,7 +59,9 @@ export function SharedTripTabs({ data, today }: { data: SharedTrip; today: strin
             This trip doesn&apos;t have any stops or bookings yet.
           </EmptyState>
         ) : (
-          <ol className="mx-auto max-w-2xl space-y-6">
+          <div className="mx-auto max-w-2xl space-y-5">
+          <CategoryFilter selected={groups} onChange={setGroups} counts={countByGroup(items)} />
+          <ol className="space-y-6">
             {stops.map((stop, i) => {
               const dates = formatDateRange(
                 stop.arriveOn ? parseDateOnly(stop.arriveOn) : null,
@@ -66,8 +74,7 @@ export function SharedTripTabs({ data, today }: { data: SharedTrip; today: strin
                       {i + 1}
                     </span>
                     <div className="min-w-0">
-                      <h3 className="font-heading text-xl font-semibold">
-                        {stop.countryCode ? <span aria-hidden>{flagEmoji(stop.countryCode)} </span> : null}
+                      <h3 className="font-heading text-xl font-extrabold">
                         {stop.name}
                       </h3>
                       <p className="text-sm text-muted-foreground">
@@ -76,27 +83,33 @@ export function SharedTripTabs({ data, today }: { data: SharedTrip; today: strin
                       {stop.notes ? <p className="mt-1 text-sm text-pretty whitespace-pre-line">{stop.notes}</p> : null}
                     </div>
                   </div>
-                  {stop.items.length ? (
+                  {groups.length && !show(stop.items).length ? (
+                    <div className="pl-12">
+                      <FilteredOutNote groups={groups} />
+                    </div>
+                  ) : null}
+                  {show(stop.items).length ? (
                     <div className="space-y-2 pl-12">
-                      {stop.items.map((item) => (
-                        <ItemCard key={item.id} item={item} currency={trip.currency} />
+                      {show(stop.items).map((item) => (
+                        <ItemCard key={item.id} item={item} currency={trip.currency} showStatus={false} />
                       ))}
                     </div>
                   ) : null}
                 </li>
               );
             })}
-            {tripItems.length ? (
+            {show(tripItems).length ? (
               <li className="space-y-3">
-                <h3 className="font-heading text-xl font-semibold">Whole trip</h3>
+                <h3 className="font-heading text-xl font-extrabold">Whole trip</h3>
                 <div className="space-y-2">
-                  {tripItems.map((item) => (
-                    <ItemCard key={item.id} item={item} currency={trip.currency} />
+                  {show(tripItems).map((item) => (
+                    <ItemCard key={item.id} item={item} currency={trip.currency} showStatus={false} />
                   ))}
                 </div>
               </li>
             ) : null}
           </ol>
+          </div>
         )}
       </TabsContent>
 

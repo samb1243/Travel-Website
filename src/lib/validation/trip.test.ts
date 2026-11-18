@@ -3,7 +3,7 @@ import { tripSchema } from "./trip";
 
 const base = {
   title: "  Tour du Mont Blanc ",
-  type: "HIKING",
+  types: ["HIKING"],
   startDate: "2027-07-03",
   endDate: "2027-07-13",
   currency: "EUR",
@@ -24,6 +24,11 @@ describe("tripSchema", () => {
     expect(r.startDate?.toISOString()).toBe("2027-07-03T00:00:00.000Z");
   });
 
+  it("accepts several types, de-duplicated and in the standard order", () => {
+    const r = tripSchema.parse({ ...base, types: ["MULTI_CITY", "BACKPACKING", "MULTI_CITY"] });
+    expect(r.types).toEqual(["BACKPACKING", "MULTI_CITY"]);
+  });
+
   it("allows a trip with no dates yet", () => {
     expect(tripSchema.safeParse({ ...base, startDate: "", endDate: "" }).success).toBe(true);
   });
@@ -33,7 +38,9 @@ describe("tripSchema", () => {
     [{ endDate: "" }, "endDate"],
     [{ endDate: "2028-07-13" }, "endDate"],
     [{ title: "   " }, "title"],
-    [{ type: "CRUISE" }, "type"],
+    [{ types: ["CRUISE"] }, "types"],
+    [{ types: [] }, "types"],
+    [{ types: ["HIKING", "BEACH", "SNOW", "RAIL", "CYCLING"] }, "types"],
     [{ currency: "XYZ" }, "currency"],
     [{ budget: "-5" }, "budget"],
     [{ budget: "12.345" }, "budget"],
@@ -49,7 +56,7 @@ describe("tripSchema", () => {
 
 describe("calendar dates", () => {
   it("rejects dates that don't exist instead of rolling them over", () => {
-    const base = { title: "T", type: "OTHER", currency: "EUR", budget: "", travellers: "1", description: "", coverImageUrl: "" };
+    const base = { title: "T", types: ["OTHER"], currency: "EUR", budget: "", travellers: "1", description: "", coverImageUrl: "" };
     expect(tripSchema.safeParse({ ...base, startDate: "2027-02-30", endDate: "2027-03-05" }).success).toBe(false);
     expect(tripSchema.safeParse({ ...base, startDate: "2027-13-01", endDate: "2027-13-05" }).success).toBe(false);
     expect(tripSchema.safeParse({ ...base, startDate: "2028-02-29", endDate: "2028-03-05" }).success).toBe(true); // leap year

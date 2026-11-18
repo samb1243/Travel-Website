@@ -93,11 +93,13 @@ export async function saveItem(
   input: ItemFormInput,
 ): Promise<ActionResult> {
   id.parse(tripId);
+  // Who's adding it (new items only), for "Added by …" on trips planned together
+  let creatorId: string | null = null;
   if (itemId) {
     const access = await requireItemEditor(id.parse(itemId));
     if (access.tripId !== tripId) return { ok: false, message: "That item belongs to another trip." };
   } else {
-    await requireTripEditor(tripId);
+    creatorId = (await requireTripEditor(tripId)).id;
     if ((await db.item.count({ where: { tripId } })) >= MAX_ITEMS_PER_TRIP) {
       return { ok: false, message: `A trip can have up to ${MAX_ITEMS_PER_TRIP} bookings and ideas.` };
     }
@@ -125,7 +127,14 @@ export async function saveItem(
     }
     const last = await tx.item.aggregate({ where: { tripId, stopId }, _max: { position: true } });
     return tx.item.create({
-      data: { ...data, tripId, stopId, position: (last._max.position ?? -1) + 1, links: { create: linkRows } },
+      data: {
+        ...data,
+        tripId,
+        stopId,
+        createdById: creatorId,
+        position: (last._max.position ?? -1) + 1,
+        links: { create: linkRows },
+      },
       select: { id: true },
     });
   });

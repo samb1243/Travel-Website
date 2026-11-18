@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Edit trip" };
 export default function EditTripPage({ params }: PageProps<"/trips/[id]/edit">) {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h2 className="font-heading text-2xl font-semibold tracking-tight">Edit trip details</h2>
+      <h2 className="font-heading text-2xl font-extrabold tracking-tight">Edit trip details</h2>
       <Suspense fallback={<Skeleton className="h-[480px] w-full rounded-2xl" />}>
         <EditTrip params={params} />
       </Suspense>
@@ -30,7 +30,7 @@ async function EditTrip({ params }: { params: Promise<{ id: string }> }) {
         cancelHref={`/trips/${trip.id}`}
         defaults={{
           title: trip.title,
-          type: trip.type,
+          types: trip.types,
           startDate: trip.startDate ? toDateOnly(trip.startDate) : "",
           endDate: trip.endDate ? toDateOnly(trip.endDate) : "",
           currency: trip.currency,
@@ -40,11 +40,16 @@ async function EditTrip({ params }: { params: Promise<{ id: string }> }) {
           coverImageUrl: trip.coverImageUrl ?? "",
         }}
       />
-      <section className="space-y-3 rounded-2xl border border-destructive/30 p-5">
-        <h3 className="font-heading font-semibold">Delete this trip</h3>
-        <p className="text-sm text-muted-foreground">Removes the trip and everything in it for good.</p>
-        <DeleteTripButton tripId={trip.id} title={trip.title} />
-      </section>
+      {/* Only the owner can delete; members can leave from the People panel instead. */}
+      {trip.isOwner ? (
+        <section className="space-y-3 rounded-2xl border border-destructive/30 p-5">
+          <h3 className="font-heading font-extrabold">Delete this trip</h3>
+          <p className="text-sm text-muted-foreground">
+            Removes the trip and everything in it for good, for everyone planning it.
+          </p>
+          <DeleteTripButton tripId={trip.id} title={trip.title} />
+        </section>
+      ) : null}
     </div>
   );
 }

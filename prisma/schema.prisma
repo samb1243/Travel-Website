@@ -20,10 +20,19 @@ datasource db {
   provider = "postgresql"
 }
 
+/// A trip can have several, e.g. backpacking AND multi-city. Used by Explore's filter.
 enum TripType {
   BACKPACKING
   MULTI_CITY
+  CITY_BREAK
+  ROAD_TRIP
+  RAIL
   HIKING
+  CYCLING
+  BEACH
+  SNOW
+  WILDLIFE
+  FAMILY
   OTHER
 }
 
@@ -69,8 +78,11 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  trips      Trip[]
-  savedTrips SavedTrip[]
+  trips       Trip[]
+  savedTrips  SavedTrip[]
+  memberships TripMember[]
+  invites     TripInvite[]
+  itemsAdded  Item[]       @relation("ItemsAdded")
   sessions   Session[]
   accounts   Account[]
 }
@@ -130,7 +142,8 @@ model Trip {
   /// Unguessable, used in share links: /t/<slug>
   slug          String     @unique
   title         String
-  type          TripType   @default(OTHER)
+  /// One or more, in TRIP_TYPES order (src/lib/trip-types.ts)
+  types         TripType[] @default([OTHER])
   description   String?
   coverImageUrl String?
   startDate     DateTime?  @db.Date
@@ -162,10 +175,13 @@ model Trip {
   stops   Stop[]
   items   Item[]
   savedBy SavedTrip[]
+  members TripMember[]
+  invites TripInvite[]
 
   @@index([ownerId, updatedAt])
   @@index([visibility, publishedAt])
   @@index([visibility, durationDays])
+  @@index([types], type: Gin)
 }
 
 model Stop {
@@ -221,6 +237,10 @@ model Item {
   notes            String?
   /// Personal: hidden on shared views, removed when a trip is copied
   privateNotes     String?
+  /// Who added it, shown as "Added by …" on trips planned together. Null if
+  /// that account was deleted.
+  createdById      String?
+  createdBy        User?        @relation("ItemsAdded", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -228,6 +248,7 @@ model Item {
 
   @@index([tripId, status])
   @@index([stopId])
+  @@index([createdById])
 }
 
 model ItemLink {
@@ -250,5 +271,38 @@ model SavedTrip {
   createdAt DateTime @default(now())
 
   @@id([userId, tripId])
+  @@index([tripId])
+}
+
+// --- Planning together ---------------------------------------------------------
+
+/// People the owner has let in to plan the trip with them. Members can edit
+/// stops, bookings and trip details; only the owner can delete the trip, change
+/// its visibility or manage members (src/server/permissions.ts).
+model TripMember {
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([tripId, userId])
+  @@index([userId])
+}
+
+/// A link the owner sends to people they want to plan with. One active link per
+/// trip; making a new one or turning it off sets revokedAt on the old one.
+model TripInvite {
+  id          String    @id @default(cuid())
+  tripId      String
+  trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  /// Unguessable, used in /invite/<token>
+  token       String    @unique
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+  revokedAt   DateTime?
+
   @@index([tripId])
 }

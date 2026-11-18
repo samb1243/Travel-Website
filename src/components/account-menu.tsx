@@ -1,20 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { LogOutIcon, LuggageIcon, UserIcon } from "lucide-react";
+import { LogOutIcon, LuggageIcon, MonitorIcon, MoonIcon, SunIcon, UserIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/user-avatar";
 import { useSignOut } from "@/components/auth/sign-out-button";
+import { useTheme, type Theme } from "@/components/theme";
 
 export function AccountMenu({ user }: { user: { name: string; email: string; image: string | null } }) {
   const signOut = useSignOut();
+  const { theme, setTheme } = useTheme();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -39,6 +43,19 @@ export function AccountMenu({ user }: { user: { name: string; email: string; ima
             <UserIcon /> Profile
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground">Theme</DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
+          <DropdownMenuRadioItem value="light">
+            <SunIcon /> Light
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="dark">
+            <MoonIcon /> Dark
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="system">
+            <MonitorIcon /> Same as device
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => void signOut()}>
           <LogOutIcon /> Log out

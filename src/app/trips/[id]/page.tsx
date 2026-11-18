@@ -24,15 +24,16 @@ export default function TripOverviewPage({ params, searchParams }: PageProps<"/t
 }
 
 async function CopiedFlash({ searchParams }: Pick<PageProps<"/trips/[id]">, "searchParams">) {
-  const { copied } = await searchParams;
+  const { copied, joined } = await searchParams;
+  if (joined) return <FlashToast message="You've joined the trip. You can now add and edit plans." />;
   return copied ? <FlashToast message="Trip copied. Everything is set to To book, ready for your own bookings." /> : null;
 }
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border bg-card p-4">
-      <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</dt>
-      <dd className="mt-1 font-heading text-lg font-semibold">{children}</dd>
+    <div className="bg-card p-4">
+      <dt className="text-sm font-semibold text-muted-foreground">{label}</dt>
+      <dd className="mt-1 font-heading text-lg font-extrabold">{children}</dd>
     </div>
   );
 }
@@ -61,20 +62,21 @@ async function Overview({ params }: { params: Promise<{ id: string }> }) {
 
       <aside className="space-y-4">
         <div className="space-y-3 rounded-2xl border bg-card p-4">
-          <h2 className="font-heading font-semibold">Bookings</h2>
+          <h2 className="font-heading font-extrabold">Bookings</h2>
           <BookingProgress counts={trip.statusCounts} size="lg" />
         </div>
-        <dl className="grid grid-cols-2 gap-3">
+        {/* One panel of trip facts, divided into cells */}
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-border">
           <Fact label="Length">{trip.durationDays ? plural(trip.durationDays, "day") : "—"}</Fact>
           <Fact label="Stops">{trip._count.stops}</Fact>
           <Fact label="Travellers">{trip.travellers}</Fact>
           <Fact label="Countries">
             {trip.countryCodes.length ? trip.countryCodes.map(flagEmoji).join(" ") : "—"}
           </Fact>
-          <div className="col-span-2 rounded-2xl border bg-card p-4">
-            <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Planned spend</dt>
+          <div className="col-span-2 bg-card p-4">
+            <dt className="text-sm font-semibold text-muted-foreground">Planned spend</dt>
             <dd className="mt-1 flex items-baseline justify-between gap-2">
-              <span className="font-heading text-lg font-semibold">{formatMoney(trip.totalCost, trip.currency)}</span>
+              <span className="font-heading text-lg font-extrabold">{formatMoney(trip.totalCost, trip.currency)}</span>
               {trip.budget !== null ? (
                 <span className={overBudget ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
                   of {formatMoney(trip.budget, trip.currency)} budget

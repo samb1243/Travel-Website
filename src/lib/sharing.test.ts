@@ -10,6 +10,13 @@ describe("canViewTrip", () => {
     expect(canViewTrip({ visibility: "UNLISTED", ownerId: "me" }, null)).toBe(true);
     expect(canViewTrip({ visibility: "PUBLIC", ownerId: "me" }, "you")).toBe(true);
   });
+
+  it("lets members of a private trip see it, and nobody else", () => {
+    const trip = { visibility: "PRIVATE" as const, ownerId: "me", memberIds: ["friend"] };
+    expect(canViewTrip(trip, "friend")).toBe(true);
+    expect(canViewTrip(trip, "stranger")).toBe(false);
+    expect(canViewTrip(trip, null)).toBe(false);
+  });
 });
 
 describe("stripPersonal", () => {
@@ -41,7 +48,7 @@ const source: CopySource = {
   ownerId: "maya",
   ownerName: "Maya Chen",
   title: "Three weeks in Thailand",
-  type: "BACKPACKING",
+  types: ["BACKPACKING", "MULTI_CITY"],
   description: "Hostels and night trains",
   coverImageUrl: "https://images.example.com/cover.jpg",
   startDate: d("2027-01-31"),
@@ -109,12 +116,14 @@ describe("planTripCopy", () => {
       copiedFromAuthor: "Maya Chen",
       budget: 2600,
       currency: "USD",
+      types: ["BACKPACKING", "MULTI_CITY"],
     });
   });
 
   it("resets every status to To book and strips personal details", () => {
     expect(copy.items.map((i) => i.status)).toEqual(["TO_BOOK", "TO_BOOK"]);
     expect(copy.items.every((i) => i.confirmationCode === null && i.privateNotes === null)).toBe(true);
+    expect(copy.items.every((i) => i.createdById === "lukas")).toBe(true); // the person copying
     expect(copy.links.map((l) => [l.kind, l.url, l.position])).toEqual([["BOOKING", "https://example.com/book", 0]]);
   });
 

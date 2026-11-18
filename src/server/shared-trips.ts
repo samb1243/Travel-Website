@@ -20,7 +20,7 @@ const sharedTripSelect = {
   ownerId: true,
   slug: true,
   title: true,
-  type: true,
+  types: true,
   description: true,
   coverImageUrl: true,
   startDate: true,
@@ -36,6 +36,8 @@ const sharedTripSelect = {
   copiedFromTitle: true,
   copiedFromAuthor: true,
   owner: { select: { name: true, image: true } },
+  // Only used for the access check below; never sent to the page.
+  members: { select: { userId: true } },
   stops: {
     orderBy: { position: "asc" },
     select: {
@@ -84,7 +86,7 @@ type SharedTripRow = Prisma.TripGetPayload<{ select: typeof sharedTripSelect }>;
 
 async function findViewable(where: Prisma.TripWhereUniqueInput, viewerId: string | null): Promise<SharedTripRow | null> {
   const trip = await db.trip.findUnique({ where, select: sharedTripSelect });
-  if (!trip || !canViewTrip(trip, viewerId)) return null;
+  if (!trip || !canViewTrip({ ...trip, memberIds: trip.members.map((m) => m.userId) }, viewerId)) return null;
   return trip;
 }
 
@@ -104,6 +106,7 @@ function toSharedItem(i: SharedTripRow["items"][number]): BuilderItem {
     status: i.status,
     notes: i.notes,
     links: i.links.map((l) => ({ id: l.id, kind: l.kind, label: l.label, url: l.url })),
+    addedBy: null, // group members' names are never shown on public pages
   });
 }
 
@@ -143,7 +146,7 @@ export const getSharedTrip = cache(async (slug: string, viewerId: string | null)
       id: trip.id,
       slug: trip.slug,
       title: trip.title,
-      type: trip.type,
+      types: trip.types,
       description: trip.description,
       coverImageUrl: trip.coverImageUrl,
       startDate: trip.startDate ? toDateOnly(trip.startDate) : null,
@@ -163,6 +166,8 @@ export const getSharedTrip = cache(async (slug: string, viewerId: string | null)
     stops,
     tripItems: items.filter((i) => i.stopId === null),
     isOwner: trip.ownerId === viewerId,
+    /** Owner or member: can open the editor */
+    canEdit: trip.ownerId === viewerId || trip.members.some((m) => m.userId === viewerId),
     saved: saved > 0,
     saveCount,
   };
@@ -179,7 +184,7 @@ export async function getCopySource(tripId: string, viewerId: string): Promise<C
     ownerId: trip.ownerId,
     ownerName: trip.owner.name,
     title: trip.title,
-    type: trip.type,
+    types: trip.types,
     description: trip.description,
     coverImageUrl: trip.coverImageUrl,
     startDate: trip.startDate,
@@ -204,7 +209,7 @@ export type ExploreCard = {
   id: string;
   slug: string;
   title: string;
-  type: SharedTripRow["type"];
+  types: SharedTripRow["types"];
   coverImageUrl: string | null;
   startDate: Date | null;
   endDate: Date | null;
@@ -214,13 +219,15 @@ export type ExploreCard = {
   totalCost: number;
   travellers: number;
   stopCount: number;
+  /** Stop names in route order, for the route line on the card */
+  stopNames: string[];
   saveCount: number;
   authorName: string;
 };
 
 function exploreWhere(f: ExploreFilters): Prisma.TripWhereInput {
   const where: Prisma.TripWhereInput = { visibility: "PUBLIC" }; // unlisted trips never appear here
-  if (f.type) where.type = f.type;
+  if (f.type) where.types = { has: f.type }; // a trip matches any of its types
   if (f.country) where.countryCodes = { has: f.country };
   if (f.length) {
     const { min, max } = LENGTHS[f.length];
@@ -245,7 +252,7 @@ export async function listPublicTrips(filters: ExploreFilters): Promise<{ trips:
         id: true,
         slug: true,
         title: true,
-        type: true,
+        types: true,
         coverImageUrl: true,
         startDate: true,
         endDate: true,
@@ -256,14 +263,16 @@ export async function listPublicTrips(filters: ExploreFilters): Promise<{ trips:
         travellers: true,
         owner: { select: { name: true } },
         _count: { select: { stops: true, savedBy: true } },
+        stops: { orderBy: { position: "asc" }, select: { name: true } },
       },
     }),
     db.trip.count({ where }),
   ]);
   return {
     total,
-    trips: rows.map(({ owner, _count, totalCost, ...t }) => ({
+    trips: rows.map(({ owner, _count, totalCost, stops, ...t }) => ({
       ...t,
+      stopNames: stops.map((s) => s.name),
       totalCost: Number(totalCost),
       stopCount: _count.stops,
       saveCount: _count.savedBy,
@@ -290,7 +299,7 @@ export async function listSavedTrips(userId: string): Promise<ExploreCard[]> {
           id: true,
           slug: true,
           title: true,
-          type: true,
+          types: true,
           coverImageUrl: true,
           startDate: true,
           endDate: true,
@@ -301,12 +310,14 @@ export async function listSavedTrips(userId: string): Promise<ExploreCard[]> {
           travellers: true,
           owner: { select: { name: true } },
           _count: { select: { stops: true, savedBy: true } },
+          stops: { orderBy: { position: "asc" }, select: { name: true } },
         },
       },
     },
   });
-  return rows.map(({ trip: { owner, _count, totalCost, ...t } }) => ({
+  return rows.map(({ trip: { owner, _count, totalCost, stops, ...t } }) => ({
     ...t,
+    stopNames: stops.map((s) => s.name),
     totalCost: Number(totalCost),
     stopCount: _count.stops,
     saveCount: _count.savedBy,

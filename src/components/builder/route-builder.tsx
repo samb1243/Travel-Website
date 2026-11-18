@@ -1,5 +1,7 @@
 "use client";
 
+import { CategoryFilter, FilteredOutNote } from "@/components/builder/category-tile";
+import { countByGroup, inGroups, type ItemGroup } from "@/lib/item-categories";
 import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
@@ -50,7 +52,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { flagEmoji, formatDateRange, plural } from "@/lib/format";
+import { formatDateRange, plural } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { deleteStop, reorderStops } from "@/server/actions/builder";
@@ -85,6 +87,10 @@ export function RouteBuilder({
 
   const [stopSheet, setStopSheet] = useState<StopSheetState>(null);
   const [itemSheet, setItemSheet] = useState<ItemSheetState>(null);
+  // Show only some kinds of item (getting around, stays...). Empty = everything.
+  const [groups, setGroups] = useState<ItemGroup[]>([]);
+  const groupCounts = countByGroup([...stops.flatMap((s) => s.items), ...tripItems]);
+  const visibleTripItems = tripItems.filter((i) => inGroups(i.category, groups));
   const [toDelete, setToDelete] = useState<BuilderStop | null>(null);
   const [, startTransition] = useTransition();
   // Stable id so dnd-kit's accessibility ids match between server and client render.
@@ -127,13 +133,14 @@ export function RouteBuilder({
     <div className="space-y-8">
       <section className="space-y-4" aria-labelledby="route-heading">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="route-heading" className="font-heading text-xl font-semibold">
+          <h2 id="route-heading" className="font-heading text-xl font-extrabold">
             Route
           </h2>
           {ordered.length ? (
             <span className="text-sm text-muted-foreground">{plural(ordered.length, "stop")}</span>
           ) : null}
         </div>
+        {ordered.length ? <CategoryFilter selected={groups} onChange={setGroups} counts={groupCounts} /> : null}
 
         {ordered.length === 0 ? (
           <EmptyState
@@ -156,7 +163,7 @@ export function RouteBuilder({
             onDragEnd={onDragEnd}
           >
             <SortableContext items={order} strategy={verticalListSortingStrategy}>
-              <ol className="space-y-4">
+              <ol className="space-y-6">
                 {ordered.map((stop, index) => (
                   <SortableStop
                     key={stop.id}
@@ -169,6 +176,7 @@ export function RouteBuilder({
                     onMove={(delta) => move(stop.id, delta)}
                     onAddItem={() => setItemSheet({ mode: "add", stopId: stop.id, defaultDate: stop.arriveOn ?? "" })}
                     onEditItem={(item) => setItemSheet({ mode: "edit", item })}
+                    groups={groups}
                   />
                 ))}
               </ol>
@@ -177,25 +185,28 @@ export function RouteBuilder({
         )}
 
         {ordered.length ? (
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-12 w-full border-dashed"
+          <button
+            type="button"
             onClick={() => setStopSheet({ mode: "add", defaultArrive: lastDepart })}
+            className="group/add grid w-full grid-cols-[2.75rem_1fr] items-center gap-x-3 rounded-2xl text-left focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
           >
-            <MapPinPlusIcon aria-hidden /> Add next stop
-          </Button>
+            <span className="grid size-11 place-items-center rounded-full border-4 border-dashed border-foreground/35 bg-background text-muted-foreground transition-colors group-hover/add:border-foreground group-hover/add:text-foreground">
+              <PlusIcon className="size-5" aria-hidden />
+            </span>
+            <span className="font-bold text-muted-foreground group-hover/add:text-foreground">Add next stop</span>
+          </button>
         ) : null}
       </section>
 
       <section className="space-y-3" aria-labelledby="whole-trip-heading">
         <div>
-          <h2 id="whole-trip-heading" className="flex items-center gap-2 font-heading text-xl font-semibold">
+          <h2 id="whole-trip-heading" className="flex items-center gap-2 font-heading text-xl font-extrabold">
             <GlobeIcon className="size-5 text-muted-foreground" aria-hidden /> Whole trip
           </h2>
           <p className="text-sm text-muted-foreground">Things not tied to one stop: insurance, visas, passes, gear.</p>
         </div>
-        {tripItems.map((item) => (
+        {groups.length && tripItems.length && !visibleTripItems.length ? <FilteredOutNote groups={groups} /> : null}
+        {visibleTripItems.map((item) => (
           <ItemCard key={item.id} item={item} currency={currency} onEdit={() => setItemSheet({ mode: "edit", item })} />
         ))}
         <Button
@@ -224,6 +235,7 @@ function SortableStop({
   onMove,
   onAddItem,
   onEditItem,
+  groups,
 }: {
   stop: BuilderStop;
   index: number;
@@ -234,6 +246,8 @@ function SortableStop({
   onMove: (delta: number) => void;
   onAddItem: () => void;
   onEditItem: (item: BuilderItem) => void;
+  /** Kinds of item to show; empty = all */
+  groups: ItemGroup[];
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: stop.id,
@@ -247,68 +261,88 @@ function SortableStop({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("rounded-3xl border bg-card/60 p-3 sm:p-4", isDragging && "relative z-20 shadow-xl ring-2 ring-primary/40")}
+      className={cn(
+        "relative grid grid-cols-[2.75rem_1fr] gap-x-3",
+        isDragging && "z-20 rounded-2xl bg-background ring-2 ring-ring/40",
+      )}
     >
-      <div className="flex items-center gap-2">
-        <button
-          ref={setActivatorNodeRef}
-          type="button"
-          {...attributes}
-          {...listeners}
-          aria-label={`Drag to reorder ${stop.name}`}
-          className="grid h-11 w-7 shrink-0 cursor-grab touch-none place-items-center rounded-md text-muted-foreground hover:bg-accent active:cursor-grabbing"
-        >
-          <GripVerticalIcon className="size-5" aria-hidden />
-        </button>
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary font-heading text-sm font-semibold text-primary-foreground">
-          {index + 1}
-        </span>
-        <button type="button" onClick={onEdit} className="min-w-0 flex-1 rounded-md text-left focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
-          <h3 className="truncate font-heading text-lg font-semibold">
-            {stop.countryCode ? <span className="mr-1.5 font-sans">{flagEmoji(stop.countryCode)}</span> : null}
-            {stop.name}
-          </h3>
-          <p className="truncate text-sm text-muted-foreground">
-            {formatDateRange(
-              stop.arriveOn ? parseDateOnly(stop.arriveOn) : null,
-              stop.departOn ? parseDateOnly(stop.departOn) : null,
-            ) ?? "Add dates"}
-            {nights !== null && nights > 0 ? ` · ${plural(nights, "night")}` : ""}
-          </p>
-        </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-11 shrink-0" aria-label={`More options for ${stop.name}`}>
-              <MoreVerticalIcon aria-hidden />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={onEdit}>
-              <PencilIcon /> Edit stop
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onMove(-1)} disabled={index === 0}>
-              <ArrowUpIcon /> Move up
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onMove(1)} disabled={index === total - 1}>
-              <ArrowDownIcon /> Move down
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-              <Trash2Icon /> Delete stop
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {/* The trail line: solid to the next stop, dashed after the last one (towards "Add next stop") */}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute top-11 -bottom-6 left-[calc(1.375rem-3px)] w-1.5",
+          index === total - 1
+            ? "bg-[repeating-linear-gradient(to_bottom,var(--trail)_0_6px,transparent_6px_12px)]"
+            : "bg-trail",
+          isDragging && "hidden",
+        )}
+      />
+      <span
+        className="relative grid size-11 place-items-center rounded-full border-4 border-foreground bg-trail font-heading text-base font-black text-trail-foreground"
+        aria-hidden
+      >
+        {index + 1}
+      </span>
+      <div className="min-w-0">
+        <div className="flex min-h-11 items-center gap-1">
+          <button type="button" onClick={onEdit} className="min-w-0 flex-1 rounded-md text-left focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
+            <h3 className="truncate font-heading text-xl leading-tight font-extrabold">
+              <span className="sr-only">Stop {index + 1}: </span>
+              {stop.name}
+            </h3>
+            <p className="truncate text-sm text-muted-foreground">
+              {formatDateRange(
+                stop.arriveOn ? parseDateOnly(stop.arriveOn) : null,
+                stop.departOn ? parseDateOnly(stop.departOn) : null,
+              ) ?? "Add dates"}
+              {nights !== null && nights > 0 ? `, ${plural(nights, "night")}` : ""}
+            </p>
+          </button>
+          <button
+            ref={setActivatorNodeRef}
+            type="button"
+            {...attributes}
+            {...listeners}
+            aria-label={`Drag to reorder ${stop.name}`}
+            className="grid size-11 shrink-0 cursor-grab touch-none place-items-center rounded-lg text-muted-foreground hover:bg-accent active:cursor-grabbing"
+          >
+            <GripVerticalIcon className="size-5" aria-hidden />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-11 shrink-0 rounded-lg" aria-label={`More options for ${stop.name}`}>
+                <MoreVerticalIcon aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={onEdit}>
+                <PencilIcon /> Edit stop
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onMove(-1)} disabled={index === 0}>
+                <ArrowUpIcon /> Move up
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onMove(1)} disabled={index === total - 1}>
+                <ArrowDownIcon /> Move down
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+                <Trash2Icon /> Delete stop
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
-      {stop.notes ? <p className="mt-2 ml-9 text-sm whitespace-pre-line text-muted-foreground sm:ml-[4.5rem]">{stop.notes}</p> : null}
+        {stop.notes ? <p className="mt-1 text-sm whitespace-pre-line text-muted-foreground">{stop.notes}</p> : null}
 
-      <div className="mt-3 space-y-2 sm:ml-[4.5rem]">
-        {stop.items.map((item) => (
-          <ItemCard key={item.id} item={item} currency={currency} onEdit={() => onEditItem(item)} />
-        ))}
-        <Button variant="ghost" className="h-11 w-full justify-start text-muted-foreground" onClick={onAddItem}>
-          <PlusIcon aria-hidden /> Add flight, stay, transport or activity
-        </Button>
+        <div className="mt-3 space-y-2">
+          {groups.length && !stop.items.some((i) => inGroups(i.category, groups)) ? <FilteredOutNote groups={groups} /> : null}
+          {stop.items.filter((i) => inGroups(i.category, groups)).map((item) => (
+            <ItemCard key={item.id} item={item} currency={currency} onEdit={() => onEditItem(item)} />
+          ))}
+          <Button variant="ghost" className="h-11 w-full justify-start rounded-xl font-semibold text-muted-foreground" onClick={onAddItem}>
+            <PlusIcon aria-hidden /> Add flight, stay, transport or activity
+          </Button>
+        </div>
       </div>
     </li>
   );

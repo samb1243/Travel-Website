@@ -66,7 +66,7 @@ function tripForm(title: string) {
   const fd = new FormData();
   for (const [k, v] of Object.entries({
     title,
-    type: "OTHER",
+    types: "OTHER",
     startDate: "",
     endDate: "",
     currency: "EUR",

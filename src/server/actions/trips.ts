@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { makeTripSlug } from "@/lib/slug";
 import { fieldErrors } from "@/lib/validation/common";
 import { tripFormValues, tripSchema } from "@/lib/validation/trip";
-import { requireTripEditor } from "@/server/permissions";
+import { requireTripEditor, requireTripOwner } from "@/server/permissions";
 import { requireUser } from "@/server/session";
 import { checkNewTripAllowed } from "@/server/trip-limits";
 import { refreshTripSummary } from "@/server/trip-summary";
@@ -52,8 +52,9 @@ export async function updateTrip(
   redirect(`/trips/${tripId}`);
 }
 
+/** Owner only: members can leave a trip, but not delete it for everyone. */
 export async function deleteTrip(tripId: string): Promise<void> {
-  await requireTripEditor(tripId);
+  await requireTripOwner(tripId);
   // Stops, items, links and saves cascade. Copies of this trip keep their
   // "based on" credit text but lose the link (onDelete: SetNull).
   await db.trip.delete({ where: { id: tripId } });

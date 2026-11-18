@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { emptyStatusCounts, type StatusCounts } from "@/lib/status";
 import type { ItemCategory, ItemStatus, LinkKind, TripType, Visibility } from "@/generated/prisma/enums";
 import { toDateOnly } from "@/lib/dates";
+import { editableBy } from "@/server/permissions";
 
 // Read-side data access for trips. Everything returned here is plain,
 // serialisable data (Decimals become numbers) that's safe to pass to
@@ -13,7 +14,7 @@ export type TripCardData = {
   id: string;
   slug: string;
   title: string;
-  type: TripType;
+  types: TripType[];
   visibility: Visibility;
   coverImageUrl: string | null;
   startDate: Date | null;
@@ -24,14 +25,20 @@ export type TripCardData = {
   totalCost: number;
   budget: number | null;
   stopCount: number;
+  /** Stop names in route order, for the route line on the card */
+  stopNames: string[];
   statusCounts: StatusCounts;
+  /** The owner's name when someone else owns it and shared it with you; null for your own trips */
+  sharedBy: string | null;
+  /** Owner plus members */
+  peopleCount: number;
 };
 
 const cardSelect = {
   id: true,
   slug: true,
   title: true,
-  type: true,
+  types: true,
   visibility: true,
   coverImageUrl: true,
   startDate: true,
@@ -41,7 +48,10 @@ const cardSelect = {
   currency: true,
   totalCost: true,
   budget: true,
-  _count: { select: { stops: true } },
+  _count: { select: { stops: true, members: true } },
+  stops: { orderBy: { position: "asc" }, select: { name: true } },
+  ownerId: true,
+  owner: { select: { name: true } },
 } as const;
 
 async function statusCountsFor(tripIds: string[]): Promise<Map<string, StatusCounts>> {
@@ -56,20 +66,23 @@ async function statusCountsFor(tripIds: string[]): Promise<Map<string, StatusCou
   return map;
 }
 
-/** The signed-in user's own trips, for the dashboard. */
+/** The user's trips for the dashboard: their own, and ones shared with them to plan together. */
 export async function listMyTrips(userId: string): Promise<TripCardData[]> {
   const trips = await db.trip.findMany({
-    where: { ownerId: userId },
+    where: editableBy(userId),
     select: cardSelect,
     orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { updatedAt: "desc" }],
   });
   const counts = await statusCountsFor(trips.map((t) => t.id));
-  return trips.map(({ _count, totalCost, budget, ...t }) => ({
+  return trips.map(({ _count, totalCost, budget, stops, ownerId, owner, ...t }) => ({
     ...t,
     totalCost: Number(totalCost),
     budget: budget === null ? null : Number(budget),
     stopCount: _count.stops,
+    stopNames: stops.map((s) => s.name),
     statusCounts: counts.get(t.id)!,
+    sharedBy: ownerId === userId ? null : owner.name,
+    peopleCount: _count.members + 1,
   }));
 }
 
@@ -79,8 +92,9 @@ export async function listMyTrips(userId: string): Promise<TripCardData[]> {
  */
 export const getTripForEditor = cache(async (tripId: string, userId: string) => {
   const trip = await db.trip.findFirst({
-    where: { id: tripId, ownerId: userId },
+    where: { id: tripId, ...editableBy(userId) },
     include: {
+      owner: { select: { name: true } },
       stops: {
         orderBy: { position: "asc" },
         include: { _count: { select: { items: true } } },
@@ -95,6 +109,8 @@ export const getTripForEditor = cache(async (tripId: string, userId: string) => 
     totalCost: Number(trip.totalCost),
     budget: trip.budget === null ? null : Number(trip.budget),
     statusCounts: counts,
+    /** Only the owner can delete, change visibility and manage people */
+    isOwner: trip.ownerId === userId,
   };
 });
 
@@ -122,6 +138,8 @@ export type BuilderItem = {
   notes: string | null;
   privateNotes: string | null;
   links: BuilderLink[];
+  /** Who added it; only filled in on trips planned together, never on shared pages */
+  addedBy: { name: string; isYou: boolean } | null;
 };
 
 export type BuilderStop = {
@@ -151,14 +169,21 @@ function byTime(a: { startAt: Date | null; position: number }, b: { startAt: Dat
 /** Everything the route builder needs, for the trip's editor only. */
 export async function getTripBuilderData(tripId: string, userId: string) {
   const trip = await db.trip.findFirst({
-    where: { id: tripId, ownerId: userId },
+    where: { id: tripId, ...editableBy(userId) },
     select: {
       stops: { orderBy: { position: "asc" } },
-      items: { include: { links: { orderBy: { position: "asc" } } } },
+      items: {
+        include: {
+          links: { orderBy: { position: "asc" } },
+          createdBy: { select: { id: true, name: true } },
+        },
+      },
+      _count: { select: { members: true } },
     },
   });
   if (!trip) return null;
 
+  const groupTrip = trip._count.members > 0;
   const items = [...trip.items].sort(byTime).map(
     (i): BuilderItem => ({
       id: i.id,
@@ -177,6 +202,9 @@ export async function getTripBuilderData(tripId: string, userId: string) {
       notes: i.notes,
       privateNotes: i.privateNotes,
       links: i.links.map((l) => ({ id: l.id, kind: l.kind, label: l.label, url: l.url })),
+      // Only worth saying who added what when more than one person is planning
+      addedBy:
+        groupTrip && i.createdBy ? { name: i.createdBy.name, isYou: i.createdBy.id === userId } : null,
     }),
   );
 

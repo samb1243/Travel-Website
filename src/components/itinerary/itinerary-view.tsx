@@ -1,5 +1,6 @@
 "use client";
 
+import { CategoryLegend, CategoryTile } from "@/components/builder/category-tile";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRightIcon, BedDoubleIcon, CalendarDaysIcon, CalendarPlusIcon, MoonIcon, SunIcon } from "lucide-react";
@@ -82,9 +83,11 @@ export function ItineraryView({
         </p>
       ) : null}
 
+      {days.length ? <CategoryLegend /> : null}
+
       <ol className="space-y-4">
         {days.map((day) => (
-          <DayCard key={day.date} day={day} isToday={day.date === today} currency={currency} onEdit={edit} />
+          <DayCard key={day.date} day={day} isToday={day.date === today} currency={currency} onEdit={edit} showStatus={!readOnly} />
         ))}
       </ol>
 
@@ -95,7 +98,7 @@ export function ItineraryView({
       {unscheduled.length ? (
         <section className="space-y-3 rounded-2xl border border-dashed p-4" aria-labelledby="unscheduled-heading">
           <div>
-            <h2 id="unscheduled-heading" className="flex items-center gap-2 font-heading text-lg font-semibold">
+            <h2 id="unscheduled-heading" className="flex items-center gap-2 font-heading text-lg font-extrabold">
               <CalendarPlusIcon className="size-5 text-muted-foreground" aria-hidden /> Not scheduled yet
             </h2>
             {readOnly ? null : (
@@ -104,12 +107,11 @@ export function ItineraryView({
           </div>
           {unscheduled.map((group) => (
             <div key={group.stopId ?? "trip"} className="space-y-1">
-              <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              <h3 className="text-sm font-semibold text-muted-foreground">
                 {group.stopName ?? "Whole trip"}
               </h3>
               <ul className="space-y-1">
                 {group.items.map((item) => {
-                  const Icon = CATEGORY_META[item.category].icon;
                   return (
                     <li key={item.id}>
                       <Tappable
@@ -117,10 +119,12 @@ export function ItineraryView({
                         className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2"
                         interactiveClassName="hover:bg-accent"
                       >
-                        <span className={cn("size-2 shrink-0 rounded-full", STATUS_META[item.status].dot)} aria-hidden />
-                        <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                        {readOnly ? null : (
+                          <span className={cn("size-2 shrink-0 rounded-full", STATUS_META[item.status].dot)} aria-hidden />
+                        )}
+                        <CategoryTile category={item.category} size="sm" />
                         <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                        <span className="sr-only">{STATUS_META[item.status].label}</span>
+                        {readOnly ? null : <span className="sr-only">{STATUS_META[item.status].label}</span>}
                       </Tappable>
                     </li>
                   );
@@ -196,11 +200,13 @@ function DayCard({
   isToday,
   currency,
   onEdit,
+  showStatus,
 }: {
   day: ItineraryDay<BuilderItem>;
   isToday: boolean;
   currency: string;
   onEdit?: (item: BuilderItem) => void;
+  showStatus: boolean;
 }) {
   const date = parseDateOnly(day.date);
   const where = day.places.map((p) => p.name);
@@ -213,11 +219,11 @@ function DayCard({
     >
       <div className="flex items-start justify-between gap-3 border-b px-4 py-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          <p className="text-sm font-semibold text-muted-foreground">
             {day.dayNumber ? `Day ${day.dayNumber}` : "Outside the trip dates"}
             {isToday ? <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-primary-foreground normal-case">Today</span> : null}
           </p>
-          <h2 className="font-heading text-lg font-semibold">{formatDate(date, { weekday: true })}</h2>
+          <h2 className="font-heading text-lg font-extrabold">{formatDate(date, { weekday: true })}</h2>
         </div>
         {where.length ? (
           <p className="mt-1 flex min-w-0 flex-wrap items-center justify-end gap-1 text-right text-sm font-medium">
@@ -235,7 +241,13 @@ function DayCard({
         {day.entries.length ? (
           <ol className="space-y-2">
             {day.entries.map((entry) => (
-              <Entry key={`${entry.item.id}-${entry.kind}`} entry={entry} currency={currency} onEdit={onEdit && (() => onEdit(entry.item))} />
+              <Entry
+                key={`${entry.item.id}-${entry.kind}`}
+                entry={entry}
+                currency={currency}
+                showStatus={showStatus}
+                onEdit={onEdit && (() => onEdit(entry.item))}
+              />
             ))}
           </ol>
         ) : (
@@ -250,11 +262,21 @@ function DayCard({
   );
 }
 
-function Entry({ entry, currency, onEdit }: { entry: DayEntry<BuilderItem>; currency: string; onEdit?: () => void }) {
+function Entry({
+  entry,
+  currency,
+  showStatus,
+  onEdit,
+}: {
+  entry: DayEntry<BuilderItem>;
+  currency: string;
+  /** Hidden on other people's trips: booking status is the owner's own business */
+  showStatus: boolean;
+  onEdit?: () => void;
+}) {
   const { item, kind, time } = entry;
   const meta = CATEGORY_META[item.category];
   const status = STATUS_META[item.status];
-  const Icon = meta.icon;
   const kindLabel = kind === "start" ? meta.labels.start : kind === "end" ? meta.labels.end : null;
   const route = item.fromPlace && item.toPlace ? `${item.fromPlace} → ${item.toPlace}` : null;
   // A single entry that spans days (rail pass) shows its full range.
@@ -269,14 +291,20 @@ function Entry({ entry, currency, onEdit }: { entry: DayEntry<BuilderItem>; curr
       <span className="w-12 shrink-0 pt-3 text-right text-sm font-medium tabular-nums text-muted-foreground">
         {time ?? (item.allDay && item.category === "ACTIVITY" ? "All day" : "")}
       </span>
-      <div className={cn("min-w-0 flex-1 rounded-xl border border-l-4 bg-background", status.border, kind === "end" && "bg-muted/40")}>
+      <div
+        className={cn(
+          "min-w-0 flex-1 rounded-xl border bg-background",
+          showStatus && cn("border-l-4", status.border),
+          kind === "end" && "bg-muted/40",
+        )}
+      >
         <Tappable
           onClick={onEdit}
           label={`Edit ${item.title}`}
           className="flex w-full items-start gap-2.5 rounded-xl p-2.5"
           interactiveClassName="hover:bg-accent/40"
         >
-          <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-label={meta.label} />
+          <CategoryTile category={item.category} size="sm" />
           <span className="min-w-0 flex-1">
             <span className="flex items-start justify-between gap-2">
               <span className="font-medium text-pretty">{item.title}</span>
@@ -285,7 +313,7 @@ function Entry({ entry, currency, onEdit }: { entry: DayEntry<BuilderItem>; curr
               ) : null}
             </span>
             {details ? <span className="block text-sm text-muted-foreground">{details}</span> : null}
-            {item.status === "TO_BOOK" || item.status === "PAY_ON_ARRIVAL" ? (
+            {showStatus && (item.status === "TO_BOOK" || item.status === "PAY_ON_ARRIVAL") ? (
               <span className={cn("mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium", status.badge)}>
                 <span aria-hidden>{status.emoji}</span> {status.label}
               </span>

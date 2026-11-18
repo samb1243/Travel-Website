@@ -7,7 +7,7 @@ import { RouteMap } from "@/components/map/route-map";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { parseDateOnly } from "@/lib/dates";
-import { flagEmoji, formatDateRange, plural } from "@/lib/format";
+import { formatDateRange, plural } from "@/lib/format";
 import { routeLengthKm, routePoints } from "@/lib/route-map";
 import { cn } from "@/lib/utils";
 
@@ -123,7 +123,6 @@ export function MapView({ tripId, stops, readOnly = false }: { tripId: string; s
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">
-                      {stop.countryCode ? <span aria-hidden>{flagEmoji(stop.countryCode)} </span> : null}
                       {stop.name}
                     </span>
                     <span className="block truncate text-sm text-muted-foreground">

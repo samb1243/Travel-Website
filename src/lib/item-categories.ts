@@ -28,7 +28,8 @@ type CategoryMeta = {
   label: string;
   icon: LucideIcon;
   /** Which form fields make sense for this kind of item */
-  fields: { route: boolean; end: boolean };
+  /** end: always shown, hidden behind "Add end time" ("optional"), or not used */
+  fields: { route: boolean; end: boolean | "optional" };
   labels: { title: string; provider: string; start: string; end: string; titlePlaceholder: string };
 };
 
@@ -54,13 +55,13 @@ export const CATEGORY_META: Record<ItemCategory, CategoryMeta> = {
   ACTIVITY: {
     label: "Activity",
     icon: CompassIcon,
-    fields: { route: false, end: true },
+    fields: { route: false, end: "optional" },
     labels: { title: "What", provider: "Operator", start: "Starts", end: "Ends", titlePlaceholder: "e.g. Cooking class" },
   },
   FOOD: {
     label: "Food",
     icon: UtensilsIcon,
-    fields: { route: false, end: false },
+    fields: { route: false, end: "optional" },
     labels: { title: "What", provider: "Place", start: "When", end: "Until", titlePlaceholder: "e.g. Street food tour" },
   },
   GEAR: {
@@ -96,4 +97,61 @@ export function linkButtonLabel(link: { kind: LinkKind; label: string | null; ur
   } catch {
     return "Link";
   }
+}
+
+// --- Colour groups ----------------------------------------------------------------
+// What kind of thing an item is, as a colour on its icon. Chosen to stay clear of
+// the booking-status colours (green, light blue, amber, grey in src/lib/status.ts)
+// and of trail yellow, which is reserved for the route.
+
+export const ITEM_GROUPS = ["TRAVEL", "STAY", "DO", "KIT"] as const;
+export type ItemGroup = (typeof ITEM_GROUPS)[number];
+
+export const GROUP_META: Record<ItemGroup, { label: string; tile: string; text: string }> = {
+  TRAVEL: {
+    label: "Getting around",
+    tile: "bg-[#4f46e5] text-white dark:bg-[#6c6ef2]", // indigo
+    text: "text-[#4f46e5] dark:text-[#9a9cf7]",
+  },
+  STAY: {
+    label: "Places to stay",
+    tile: "bg-[#b0308c] text-white dark:bg-[#c94ba6]", // magenta
+    text: "text-[#b0308c] dark:text-[#e48ccb]",
+  },
+  DO: {
+    label: "Things to do",
+    tile: "bg-[#d23a52] text-white dark:bg-[#e2566c]", // rose
+    text: "text-[#d23a52] dark:text-[#f2909f]",
+  },
+  KIT: {
+    label: "Gear & admin",
+    tile: "bg-[#8a5a36] text-white dark:bg-[#a87048]", // leather brown
+    text: "text-[#8a5a36] dark:text-[#d4a27c]",
+  },
+};
+
+const CATEGORY_GROUP: Record<ItemCategory, ItemGroup> = {
+  FLIGHT: "TRAVEL",
+  TRANSPORT: "TRAVEL",
+  ACCOMMODATION: "STAY",
+  ACTIVITY: "DO",
+  FOOD: "DO",
+  GEAR: "KIT",
+  OTHER: "KIT",
+};
+
+export function itemGroup(category: ItemCategory): ItemGroup {
+  return CATEGORY_GROUP[category];
+}
+
+/** Whether an item passes a group filter. No groups picked means "show everything". */
+export function inGroups(category: ItemCategory, groups: readonly ItemGroup[]): boolean {
+  return groups.length === 0 || groups.includes(itemGroup(category));
+}
+
+/** How many items fall in each group, for the counts on the filter. */
+export function countByGroup(items: readonly { category: ItemCategory }[]): Record<ItemGroup, number> {
+  const counts: Record<ItemGroup, number> = { TRAVEL: 0, STAY: 0, DO: 0, KIT: 0 };
+  for (const i of items) counts[itemGroup(i.category)]++;
+  return counts;
 }

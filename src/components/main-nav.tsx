@@ -28,15 +28,17 @@ function DesktopNavWithPath() {
 
 function DesktopNavLinks({ pathname }: { pathname: string }) {
   return (
-    <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+    <nav className="hidden items-stretch gap-1 self-stretch md:flex" aria-label="Main">
       {NAV_LINKS.map(({ href, label }) => (
         <Link
           key={href}
           href={href}
           aria-current={isActive(pathname, href) ? "page" : undefined}
           className={cn(
-            "rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-            isActive(pathname, href) && "bg-accent text-foreground",
+            // The current section is marked like a trail blaze: a yellow bar under it.
+            "relative flex h-16 items-center px-3 text-[0.9375rem] font-semibold text-muted-foreground transition-colors hover:text-foreground",
+            "after:absolute after:inset-x-3 after:bottom-0 after:h-1 after:rounded-t-full after:bg-transparent",
+            isActive(pathname, href) && "text-foreground after:bg-trail",
           )}
         >
           {label}
@@ -63,7 +65,7 @@ function MobileTabBarLinks({ pathname }: { pathname: string }) {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 bg-[#1c3a32] pb-[env(safe-area-inset-bottom)] text-[#e6eeea] md:hidden dark:border-t dark:bg-card"
     >
       <ul className="grid grid-cols-3">
         {NAV_LINKS.map(({ href, label, icon: Icon }) => {
@@ -74,11 +76,18 @@ function MobileTabBarLinks({ pathname }: { pathname: string }) {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground",
-                  active && "text-foreground",
+                  "flex h-16 flex-col items-center justify-center gap-1 text-xs font-semibold text-[#e6eeea]/70",
+                  active && "text-[#e6eeea]",
                 )}
               >
-                <Icon className="size-5" aria-hidden />
+                <span
+                  className={cn(
+                    "grid h-7 w-12 place-items-center rounded-full transition-colors",
+                    active && "bg-trail text-trail-foreground",
+                  )}
+                >
+                  <Icon className="size-5" aria-hidden />
+                </span>
                 {label}
               </Link>
             </li>

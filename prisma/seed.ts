@@ -93,7 +93,7 @@ async function main() {
         ownerId,
         slug: makeTripSlug(t.title, t.slugSuffix),
         title: t.title,
-        type: t.type,
+        types: t.types,
         visibility: t.visibility,
         description: t.description,
         coverImageUrl: t.coverImageUrl ?? null,
@@ -104,7 +104,9 @@ async function main() {
         travellers: t.travellers,
         publishedAt: t.visibility === "PUBLIC" ? new Date() : null,
         items: {
-          create: [...(t.items ?? [])].sort(byStart).map((item, i) => itemData(item, start, i)),
+          create: [...(t.items ?? [])]
+            .sort(byStart)
+            .map((item, i) => ({ ...itemData(item, start, i), createdBy: { connect: { id: ownerId } } })),
         },
       },
     });
@@ -126,7 +128,11 @@ async function main() {
           items: {
             create: [...(s.items ?? [])]
               .sort(byStart)
-              .map((item, i) => ({ ...itemData(item, start, i), trip: { connect: { id: trip.id } } })),
+              .map((item, i) => ({
+                ...itemData(item, start, i),
+                trip: { connect: { id: trip.id } },
+                createdBy: { connect: { id: ownerId } },
+              })),
           },
         },
       });

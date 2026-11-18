@@ -52,8 +52,8 @@ export function ShareDialog({ tripId, slug, visibility }: { tripId: string; slug
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="secondary" size="lg" className="h-10 shrink-0 bg-white/90 text-neutral-900 hover:bg-white">
-          <Share2Icon aria-hidden /> <span className="sr-only sm:not-sr-only">Share</span>
+        <Button variant="outline" size="lg" className="h-11 shrink-0 rounded-xl border-2 px-4 font-bold">
+          <Share2Icon aria-hidden /> Share
         </Button>
       </DialogTrigger>
       <DialogContent>

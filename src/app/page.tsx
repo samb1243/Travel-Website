@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CheckCircle2Icon, CopyIcon, MapIcon, WalletIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WindowView } from "@/components/window-view";
+import { Signpost } from "@/components/signpost";
 
 const FEATURES = [
   {
@@ -28,34 +28,38 @@ const FEATURES = [
 
 export default function HomePage() {
   return (
-    <div className="space-y-12">
-      <section className="grid items-center gap-10 pt-4 md:grid-cols-[1fr_280px] md:pt-10">
-        <div className="space-y-6">
-          <h1 className="max-w-2xl font-heading text-4xl font-semibold tracking-tight text-balance md:text-5xl">
+    <div className="space-y-16 md:space-y-24">
+      <section className="grid items-center gap-8 pt-2 md:grid-cols-[1.15fr_1fr] md:gap-12 md:pt-12">
+        <div className="space-y-7">
+          <h1 className="font-heading text-[2.875rem] leading-[0.95] font-black tracking-[-0.025em] text-balance sm:text-6xl md:text-7xl">
             Every trip, in one place.
           </h1>
-          <p className="max-w-xl text-lg text-muted-foreground text-pretty">
+          <p className="max-w-[34rem] text-lg leading-relaxed text-pretty text-muted-foreground">
             Plan backpacking routes, multi-city trips and hikes. Keep every booking link and
             confirmation handy while you travel, then share the trip so others can copy it.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button asChild size="lg" className="h-12 px-6 text-base">
+            <Button asChild size="lg" className="h-12 rounded-xl px-7 text-base font-bold">
               <Link href="/signup">Plan a trip</Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="h-12 px-6 text-base">
+            <Button asChild size="lg" variant="outline" className="h-12 rounded-xl border-2 px-7 text-base font-bold">
               <Link href="/explore">Explore trips</Link>
             </Button>
           </div>
         </div>
-        <WindowView className="mx-auto hidden max-w-[280px] drop-shadow-xl md:block" />
+        <Signpost className="max-w-sm md:max-w-md" />
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid gap-x-12 gap-y-10 border-t-4 border-foreground pt-10 sm:grid-cols-2">
         {FEATURES.map(({ icon: Icon, title, text }) => (
-          <div key={title} className="rounded-2xl border bg-card p-5">
-            <Icon className="mb-3 size-6 text-primary" aria-hidden />
-            <h2 className="font-heading font-semibold">{title}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{text}</p>
+          <div key={title} className="grid grid-cols-[auto_1fr] gap-x-4">
+            <span className="grid size-11 place-items-center rounded-xl bg-foreground text-background">
+              <Icon className="size-5" aria-hidden />
+            </span>
+            <div>
+              <h2 className="font-heading text-xl font-extrabold">{title}</h2>
+              <p className="mt-1 max-w-[36ch] text-muted-foreground">{text}</p>
+            </div>
           </div>
         ))}
       </section>

@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "New trip" };
 export default function NewTripPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="font-heading text-3xl font-semibold tracking-tight">Start a new trip</h1>
+      <h1 className="font-heading text-3xl font-extrabold tracking-tight">Start a new trip</h1>
       <Suspense fallback={<Skeleton className="h-[480px] w-full rounded-2xl" />}>
         <NewTripForm />
       </Suspense>
@@ -27,7 +27,7 @@ async function NewTripForm() {
       cancelHref="/dashboard"
       defaults={{
         title: "",
-        type: "BACKPACKING",
+        types: [],
         startDate: "",
         endDate: "",
         currency: user.homeCurrency,

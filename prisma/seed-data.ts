@@ -44,7 +44,7 @@ export type SeedTrip = {
   /** Fixed slug suffix so demo share links survive re-seeding */
   slugSuffix: string;
   title: string;
-  type: TripType;
+  types: TripType[];
   visibility: Visibility;
   description: string;
   startDate: string;
@@ -89,7 +89,7 @@ const southeastAsia: SeedTrip = {
   slugSuffix: "sea3wk2027",
   coverImageUrl: unsplash("photo-1694152363060-cc26bde73872"),
   title: "Three weeks in Thailand, Laos & Vietnam",
-  type: "BACKPACKING",
+  types: ["BACKPACKING", "MULTI_CITY"],
   visibility: "PUBLIC",
   description:
     "A classic first-timer loop: Bangkok temples, northern Thailand's mountains, slow days in Laos and Vietnam's food capitals. Overland where it's fun (sleeper train, minivans, the new Laos–China railway), flying where it saves a day.",
@@ -574,7 +574,7 @@ const europeRail: SeedTrip = {
   slugSuffix: "eurail2027",
   coverImageUrl: unsplash("photo-1600623471616-8c1966c91ff6"),
   title: "Two weeks by train: Amsterdam to Budapest",
-  type: "MULTI_CITY",
+  types: ["MULTI_CITY", "RAIL"],
   visibility: "PUBLIC",
   description:
     "Five capitals, no flights between them. Eurostar in, Interrail pass across Germany, Czechia, Austria and Hungary, and a cheap flight home. Costs are for two people.",
@@ -901,7 +901,7 @@ const tmb: SeedTrip = {
   slugSuffix: "tmb8stages",
   coverImageUrl: unsplash("photo-1600417145424-85b4254fe4b1"),
   title: "Tour du Mont Blanc: 8 stages, 3 countries",
-  type: "HIKING",
+  types: ["HIKING"],
   visibility: "PUBLIC",
   description:
     "Anticlockwise TMB from Chamonix through France, Italy and Switzerland, sleeping in refuges and village gîtes with half board. Shortened to 8 walking days by finishing at Argentière. Book huts in January; they fill fast for July.",
@@ -1204,7 +1204,7 @@ const privateDraft: SeedTrip = {
   slugSuffix: "japandraft",
   coverImageUrl: unsplash("photo-1669711675954-ff2581eaedc2"),
   title: "Japan in cherry blossom season (draft)",
-  type: "MULTI_CITY",
+  types: ["MULTI_CITY", "CITY_BREAK"],
   visibility: "PRIVATE",
   description: "Rough idea for next spring.",
   startDate: "2027-03-28",

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { WindowView } from "@/components/window-view";
+import { Signpost } from "@/components/signpost";
 
 export function AuthShell({
   title,
@@ -13,17 +13,17 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="mx-auto grid w-full max-w-4xl items-center gap-10 md:grid-cols-[1fr_minmax(0,320px)] md:py-6">
+    <div className="mx-auto grid w-full max-w-4xl items-center gap-10 md:grid-cols-[1fr_minmax(0,360px)] md:py-6">
       <div className="mx-auto w-full max-w-sm space-y-6">
         <div className="space-y-2">
-          <h1 className="font-heading text-3xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="font-heading text-4xl leading-none font-black tracking-[-0.02em]">{title}</h1>
           {subtitle ? <p className="text-muted-foreground">{subtitle}</p> : null}
         </div>
         {children}
         {footer ? <div className="text-sm text-muted-foreground">{footer}</div> : null}
       </div>
       <div className="hidden md:block">
-        <WindowView className="drop-shadow-xl" />
+        <Signpost />
       </div>
     </div>
   );

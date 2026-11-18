@@ -6,7 +6,7 @@ export function Logo() {
   return (
     <Link
       href="/"
-      className="flex items-center gap-2 rounded-md font-heading text-xl font-semibold tracking-tight"
+      className="flex items-center gap-2 rounded-md font-heading text-xl font-extrabold tracking-tight"
       aria-label={`${APP_NAME} home`}
     >
       <LogoMark />

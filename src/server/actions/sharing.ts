@@ -10,7 +10,7 @@ import { planTripCopy } from "@/lib/sharing";
 import { checkNewTripAllowed } from "@/server/trip-limits";
 import { makeTripSlug } from "@/lib/slug";
 import { optionalDate } from "@/lib/validation/common";
-import { requireTripEditor } from "@/server/permissions";
+import { requireTripOwner } from "@/server/permissions";
 import { requireUser } from "@/server/session";
 import { canView, getCopySource } from "@/server/shared-trips";
 import { refreshTripSummary } from "@/server/trip-summary";
@@ -24,7 +24,7 @@ const visibilitySchema = z.enum(["PRIVATE", "UNLISTED", "PUBLIC"]);
 
 /** Owner only. Public trips get a publishedAt the first time, for Explore's "newest". */
 export async function setVisibility(tripId: string, visibility: string): Promise<ActionResult> {
-  await requireTripEditor(id.parse(tripId));
+  await requireTripOwner(id.parse(tripId));
   const parsed = visibilitySchema.safeParse(visibility);
   if (!parsed.success) return { ok: false, message: "Pick who can see this trip." };
 

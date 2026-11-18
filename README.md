@@ -118,7 +118,10 @@ Signing in with Google using the same email as an existing password account link
   plus trips you saved from Explore.
 - **Booking progress** ("22/34 booked") counts items that need a booking. Booked and
   pay-on-arrival items count as booked; "No booking needed" items are left out.
-- **New trip** needs only a name and type. Dates, budget, travellers, currency (defaults to
+- **Trip types:** pick all that fit, up to 4, from Backpacking, Multi-city, City break,
+  Road trip, Rail journey, Hiking, Cycling, Beach & islands, Snow & skiing, Wildlife &
+  safari, Family trip and Other. Explore's type filter finds a trip under any of its types.
+- **New trip** needs only a name and at least one type. Dates, budget, travellers, currency (defaults to
   your home currency), description and cover photo link are optional.
 - **Edit / delete** from the pencil button on a trip. Deleting asks for confirmation.
 - Only the owner can open `/trips/<id>/…`. Anyone else gets "Page not found", the same as
@@ -217,6 +220,25 @@ results cached for a day, and 30 searches per user per minute. Set `NOMINATIM_US
   "Based on X's trip" credited. Pick a new start date and every date moves to match. On
   your own trip the button says **Duplicate**.
 
+## Planning together
+
+- **People** (button on a trip) shows everyone planning it. The owner makes an **invite link**
+  there and sends it however they like; it works for 14 days, and "New link" or "Turn off"
+  stops the old one working. Anyone who opens it, logs in and taps **Join trip** becomes a
+  member (up to 20 people per trip).
+- **Members can:** add, edit, reorder and delete stops and bookings, change booking statuses,
+  edit the trip's details, and see the group's confirmation numbers and private notes.
+- **Only the owner can:** delete the trip, change who can see it (Private / Unlisted / Public),
+  make or turn off invite links, and remove people. Members can **leave** from the People
+  panel.
+- Shared trips show on members' My trips as "Shared by …"; the owner's card says
+  "Planning with 2 others". Removing or leaving takes access away immediately.
+- On a trip with more than one person, each booking says who added it ("Added by Lukas",
+  "Added by you") on the Overview and Checklist. Not shown on trips you plan alone, and never
+  on public or unlisted pages.
+- Confirmation numbers and private notes are visible to the group, but still never shown on
+  public/unlisted pages or copied.
+
 ## Security
 
 How the three rules ("validate inputs", "users can only edit their own trips", "never expose
@@ -226,9 +248,11 @@ private trips") are enforced, and where.
 - Every server action is a public HTTP endpoint, so each one checks the caller itself before
   touching data, whatever the UI sends (`src/server/actions/*`). There are 14, and nothing else
   is exported from those files (anything exported from a `"use server"` file becomes callable).
-- Ownership checks live in one place, `src/server/permissions.ts` (`requireTripEditor`,
-  `requireStopEditor`, `requireItemEditor`). Stops and items are looked up *through* their
-  trip's owner, so passing your own trip id with someone else's item id doesn't work.
+- Access checks live in one place, `src/server/permissions.ts`: `requireTripEditor`,
+  `requireStopEditor` and `requireItemEditor` allow the owner and members; `requireTripOwner`
+  guards delete, visibility, invites and removing people. Stops and items are looked up
+  *through* their trip's editors, so passing your own trip id with someone else's item id
+  doesn't work.
 - Someone else's trip and a trip that doesn't exist get the same "not found", so ids can't be
   probed. Signed-out callers are sent to the login page.
 - Public means "anyone can view and copy", never "anyone can edit".
@@ -260,7 +284,8 @@ private trips") are enforced, and where.
 
 **Tested:** `npm run test:integration` runs the real server actions against a separate
 `tripstack_test` database. It checks every write action as another user and as a signed-out
-visitor on both private and public trips, confirming nothing in the database changes. It
+visitor on both private and public trips, confirming nothing in the database changes, and
+covers invite links, what members can and can't do, and removing or leaving. It
 also checks that shared pages, Explore, saved trips and copies never contain planted
 secrets, and that malicious inputs are rejected. See `test/integration/`.
 
@@ -309,8 +334,6 @@ The code leaves room for each of these:
 - **Recommendations:** stops store a stable OpenStreetMap place id (`Stop.placeId`) so trips
   through the same place can be matched; add a recommendations service behind a small
   interface, like place search in `src/server/geocode.ts`.
-- **Collaborators:** extend `canEditTrip` in `src/server/permissions.ts` with trip members;
-  every page and action already goes through it.
 - **Multi-currency:** `Item.currency` is already in the schema (null = trip currency); replace
   the rough rates in `src/lib/fx.ts` with live ones and convert in the budget maths.
 - **Parse booking emails** into items (forwarding address + parser), **PDF/ICS export** of
@@ -335,8 +358,10 @@ The code leaves room for each of these:
 - **Integration tests say they can't reach Postgres**: run `npm run db:up` first.
 - **npm warns about `install-scripts`**: npm 11 blocks dependency install scripts unless
   they're approved in `package.json` → `allowScripts`. Prisma and esbuild are already approved.
-- Windows doesn't draw flag emoji, so countries show as letters (e.g. "TH LA VN") there.
-  Phones and Macs show real flags.
+- Country flags: Windows has no flag emoji, so the app serves a small flags-only font
+  (`public/fonts/TwemojiCountryFlags.woff2`, from TalkJS's MIT-licensed
+  country-flag-emoji-polyfill; flag artwork by Twitter/Twemoji, CC-BY 4.0). It only covers
+  flag characters, so everything else stays in Overpass.
 
 ## Project layout
 

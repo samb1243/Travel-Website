@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Profile" };
 export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-xl space-y-8">
-      <h1 className="font-heading text-3xl font-semibold tracking-tight">Profile</h1>
+      <h1 className="font-heading text-3xl font-extrabold tracking-tight">Profile</h1>
       <Suspense fallback={<ProfileSkeleton />}>
         <Profile />
       </Suspense>
@@ -24,7 +24,7 @@ export default function ProfilePage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-4 rounded-2xl border bg-card p-5 sm:p-6">
-      <h2 className="font-heading text-lg font-semibold">{title}</h2>
+      <h2 className="font-heading text-lg font-extrabold">{title}</h2>
       {children}
     </section>
   );

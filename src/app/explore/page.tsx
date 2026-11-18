@@ -20,7 +20,7 @@ export default function ExplorePage({ searchParams }: PageProps<"/explore">) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-3xl font-semibold tracking-tight">Explore trips</h1>
+        <h1 className="font-heading text-4xl leading-none font-black tracking-[-0.02em] md:text-5xl">Explore trips</h1>
         <p className="text-muted-foreground">Real routes from other travellers. Copy one and make it yours.</p>
       </div>
       <Suspense fallback={<ExploreSkeleton />}>
@@ -62,7 +62,7 @@ async function Results({ searchParams }: Pick<PageProps<"/explore">, "searchPara
             {plural(total, "trip")}
             {hasFilters(filters) ? " match" : ""}
           </p>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {trips.map((t) => (
               <ExploreTripCard key={t.id} trip={t} />
             ))}
@@ -101,7 +101,7 @@ function ExploreSkeleton() {
   return (
     <div className="space-y-6" aria-hidden>
       <Skeleton className="h-11 w-full rounded-xl" />
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }, (_, i) => (
           <Skeleton key={i} className="aspect-[4/3] w-full rounded-3xl" />
         ))}

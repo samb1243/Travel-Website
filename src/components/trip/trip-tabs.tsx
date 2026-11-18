@@ -31,9 +31,9 @@ export function TripTabs({ basePath }: { basePath: string }) {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-12 items-center gap-2 border-b-2 px-3 text-sm font-medium whitespace-nowrap transition-colors",
+                  "flex h-12 items-center gap-2 border-b-4 px-3 text-[0.9375rem] font-bold whitespace-nowrap transition-colors",
                   active
-                    ? "border-primary text-foreground"
+                    ? "border-trail text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >

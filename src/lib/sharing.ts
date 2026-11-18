@@ -11,9 +11,13 @@ import type { ItemCategory, ItemStatus, LinkKind, TripType, Visibility } from "@
 
 export const SHAREABLE: readonly Visibility[] = ["PUBLIC", "UNLISTED"];
 
-/** Owner always; anyone else only for public or unlisted trips. */
-export function canViewTrip(trip: { visibility: Visibility; ownerId: string }, viewerId: string | null): boolean {
-  return trip.ownerId === viewerId || SHAREABLE.includes(trip.visibility);
+/** Owner and members always; anyone else only for public or unlisted trips. */
+export function canViewTrip(
+  trip: { visibility: Visibility; ownerId: string; memberIds?: readonly string[] },
+  viewerId: string | null,
+): boolean {
+  if (viewerId !== null && (trip.ownerId === viewerId || trip.memberIds?.includes(viewerId))) return true;
+  return SHAREABLE.includes(trip.visibility);
 }
 
 type LinkLike = { kind: LinkKind };
@@ -38,7 +42,7 @@ export type CopySource = {
   ownerId: string;
   ownerName: string;
   title: string;
-  type: TripType;
+  types: TripType[];
   description: string | null;
   coverImageUrl: string | null;
   startDate: Date | null;
@@ -115,7 +119,7 @@ export function planTripCopy(source: CopySource, opts: CopyOptions) {
     ownerId: opts.newOwnerId,
     slug: opts.slug,
     title: isOwnTrip ? `${source.title} (copy)`.slice(0, 100) : source.title,
-    type: source.type,
+    types: source.types,
     description: source.description,
     coverImageUrl: source.coverImageUrl,
     startDate: shift(source.startDate),
@@ -159,6 +163,7 @@ export function planTripCopy(source: CopySource, opts: CopyOptions) {
     tripId: string;
     confirmationCode: null;
     privateNotes: null;
+    createdById: string;
   };
   const items: CopiedItem[] = [];
   const links: Array<{ id: string; itemId: string; kind: LinkKind; label: string | null; url: string; position: number }> = [];
@@ -183,6 +188,7 @@ export function planTripCopy(source: CopySource, opts: CopyOptions) {
       confirmationCode: null,
       notes: i.notes,
       privateNotes: null,
+      createdById: opts.newOwnerId, // copying counts as adding them to your own trip
     });
     shareableLinks(i.links)
       .sort((a, b) => a.position - b.position)

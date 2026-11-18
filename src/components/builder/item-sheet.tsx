@@ -7,8 +7,9 @@ import { Field, FormError, SubmitButton } from "@/components/auth/form-bits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CATEGORY_META, ITEM_CATEGORIES, LINK_KIND_META, LINK_KINDS } from "@/lib/item-categories";
+import { CATEGORY_META, GROUP_META, ITEM_CATEGORIES, itemGroup, LINK_KIND_META, LINK_KINDS } from "@/lib/item-categories";
 import { ITEM_STATUSES, STATUS_META } from "@/lib/status";
 import { MAX_LINKS } from "@/lib/validation/item";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,8 @@ export function ItemSheet({
   );
 }
 
+const WHOLE_TRIP = "__whole_trip";
+
 type LinkRow = { key: string; kind: LinkKind; label: string; url: string };
 
 const dateOf = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
@@ -80,6 +83,10 @@ function ItemForm({
   const item = state.mode === "edit" ? state.item : null;
   const [category, setCategory] = useState<ItemCategory>(item?.category ?? (state.mode === "add" ? state.category : undefined) ?? "ACTIVITY");
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? "TO_BOOK");
+  // Which stop it belongs to; WHOLE_TRIP = not tied to a stop.
+  const [stopId, setStopId] = useState<string>(
+    (item ? item.stopId : state.mode === "add" ? state.stopId : null) ?? WHOLE_TRIP,
+  );
   // Free = a price of 0. An empty price means "not priced yet", which the budget treats differently.
   const [free, setFree] = useState(item?.cost === 0);
   const [links, setLinks] = useState<LinkRow[]>(
@@ -91,6 +98,9 @@ function ItemForm({
   const [deleting, startDelete] = useTransition();
 
   const meta = CATEGORY_META[category];
+  // Activities and food only ask for an end time when you want one.
+  const [addEnd, setAddEnd] = useState(Boolean(item?.endAt));
+  const showEnd = meta.fields.end === true || (meta.fields.end === "optional" && addEnd);
   const defaultDate = state.mode === "add" ? state.defaultDate : "";
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -98,14 +108,14 @@ function ItemForm({
     const fd = new FormData(e.currentTarget);
     const get = (k: string) => String(fd.get(k) ?? "");
     const input = {
-      stopId: get("stopId") || null,
+      stopId: stopId === WHOLE_TRIP ? null : stopId,
       category,
       title: get("title"),
       provider: get("provider"),
       startDate: get("startDate"),
       startTime: get("startTime"),
-      endDate: meta.fields.end ? get("endDate") : "",
-      endTime: meta.fields.end ? get("endTime") : "",
+      endDate: showEnd ? get("endDate") : "",
+      endTime: showEnd ? get("endTime") : "",
       fromPlace: meta.fields.route ? get("fromPlace") : "",
       toPlace: meta.fields.route ? get("toPlace") : "",
       cost: free ? "0" : get("cost"),
@@ -164,7 +174,7 @@ function ItemForm({
                 )}
               >
                 <input type="radio" name="category" value={c} checked={active} onChange={() => setCategory(c)} className="sr-only" />
-                <Icon className="size-4" aria-hidden />
+                <Icon className={cn("size-4", !active && GROUP_META[itemGroup(c)].text)} aria-hidden />
                 {m.label}
               </label>
             );
@@ -193,11 +203,26 @@ function ItemForm({
         <Field id="startDate" name="startDate" type="date" label={meta.labels.start} defaultValue={item ? dateOf(item.startAt) : defaultDate} error={errors.startDate} />
         <Field id="startTime" name="startTime" type="time" label="Time" defaultValue={item && !item.allDay ? timeOf(item.startAt) : ""} error={errors.startTime} className="w-32" />
       </div>
-      {meta.fields.end ? (
-        <div className="grid grid-cols-[1fr_auto] gap-3">
-          <Field id="endDate" name="endDate" type="date" label={meta.labels.end} defaultValue={dateOf(item?.endAt ?? null)} error={errors.endDate} />
-          <Field id="endTime" name="endTime" type="time" label="Time" defaultValue={timeOf(item?.endAt ?? null)} error={errors.endTime} className="w-32" />
+      {showEnd ? (
+        <div className="space-y-1.5">
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <Field id="endDate" name="endDate" type="date" label={meta.labels.end} defaultValue={dateOf(item?.endAt ?? null)} error={errors.endDate} />
+            <Field id="endTime" name="endTime" type="time" label="Time" defaultValue={timeOf(item?.endAt ?? null)} error={errors.endTime} className="w-32" />
+          </div>
+          {meta.fields.end === "optional" ? (
+            <button
+              type="button"
+              onClick={() => setAddEnd(false)}
+              className="text-sm font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Remove end time
+            </button>
+          ) : null}
         </div>
+      ) : meta.fields.end === "optional" ? (
+        <Button type="button" variant="ghost" className="-mt-2 h-10 justify-start rounded-xl px-2 font-semibold text-muted-foreground" onClick={() => setAddEnd(true)}>
+          <PlusIcon aria-hidden /> Add end time
+        </Button>
       ) : null}
       <p className="-mt-3 text-xs text-muted-foreground">Times are local to where it happens. Leave the time empty for an all-day item.</p>
 
@@ -267,18 +292,18 @@ function ItemForm({
         {links.map((l) => (
           <div key={l.key} className="space-y-2 rounded-xl border p-3">
             <div className="flex gap-2">
-              <select
-                aria-label="Link type"
-                value={l.kind}
-                onChange={(e) => updateLink(l.key, { kind: e.target.value as LinkKind })}
-                className="h-11 rounded-lg border bg-transparent px-2 text-sm"
-              >
-                {LINK_KINDS.map((k) => (
-                  <option key={k} value={k}>
-                    {LINK_KIND_META[k].label}
-                  </option>
-                ))}
-              </select>
+              <Select value={l.kind} onValueChange={(v) => updateLink(l.key, { kind: v as LinkKind })}>
+                <SelectTrigger aria-label="Link type" className="w-36 shrink-0 rounded-lg data-[size=default]:h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LINK_KINDS.map((k) => (
+                    <SelectItem key={k} value={k} className="min-h-10">
+                      {LINK_KIND_META[k].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Input
                 aria-label="Button text (optional)"
                 placeholder="Button text (optional)"
@@ -340,9 +365,11 @@ function ItemForm({
       {/* Personal details */}
       <div className="space-y-4 rounded-2xl border border-dashed p-4">
         <p className="flex items-center gap-2 text-sm font-medium">
-          <LockIcon className="size-4 text-muted-foreground" aria-hidden /> Just for you
+          <LockIcon className="size-4 text-muted-foreground" aria-hidden /> Private to your group
         </p>
-        <p className="-mt-2 text-xs text-muted-foreground">Never shown on shared trips and removed when someone copies yours.</p>
+        <p className="-mt-2 text-xs text-muted-foreground">
+          Only you and the people planning this trip see these. Never shown on shared trips or copied.
+        </p>
         <Field id="confirmationCode" name="confirmationCode" label="Confirmation number" defaultValue={item?.confirmationCode ?? ""} error={errors.confirmationCode} autoComplete="off" />
         <div className="space-y-2">
           <Label htmlFor="privateNotes">Private notes</Label>
@@ -352,19 +379,25 @@ function ItemForm({
 
       <div className="space-y-2">
         <Label htmlFor="stopId">Part of</Label>
-        <select
-          id="stopId"
-          name="stopId"
-          defaultValue={item ? (item.stopId ?? "") : state.mode === "add" ? (state.stopId ?? "") : ""}
-          className="h-12 w-full rounded-lg border bg-transparent px-3 text-base md:text-sm"
-        >
-          {stops.map((s, i) => (
-            <option key={s.id} value={s.id}>
-              {i + 1}. {s.name}
-            </option>
-          ))}
-          <option value="">Whole trip (not tied to a stop)</option>
-        </select>
+        <Select value={stopId} onValueChange={setStopId}>
+          <SelectTrigger id="stopId" className="w-full rounded-lg text-base data-[size=default]:h-12 md:text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {stops.map((s, i) => (
+              <SelectItem key={s.id} value={s.id} className="min-h-11">
+                <span className="grid size-6 shrink-0 place-items-center rounded-full border-2 border-foreground bg-trail text-xs font-black text-trail-foreground">
+                  {i + 1}
+                </span>
+                {s.name}
+              </SelectItem>
+            ))}
+            {stops.length ? <SelectSeparator /> : null}
+            <SelectItem value={WHOLE_TRIP} className="min-h-11">
+              Whole trip (not tied to a stop)
+            </SelectItem>
+          </SelectContent>
+        </Select>
         {errors.stopId ? <p className="text-sm text-destructive">{errors.stopId}</p> : null}
       </div>
 

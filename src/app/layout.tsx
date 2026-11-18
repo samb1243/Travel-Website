@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import { Overpass, Overpass_Mono } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import { MobileTabBar } from "@/components/main-nav";
 import { ThemeSync, themeScript } from "@/components/theme";
@@ -7,20 +7,16 @@ import { Toaster } from "@/components/ui/sonner";
 import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-sans",
+// Overpass is an open-source version of Highway Gothic, the lettering on road
+// and trail signs. One family for everything: heavy for titles, regular for text.
+const overpass = Overpass({
+  variable: "--font-overpass",
   subsets: ["latin"],
 });
 
-// Editorial serif for headings, like a travel magazine.
-const fraunces = Fraunces({
-  variable: "--font-display",
-  subsets: ["latin"],
-  axes: ["opsz", "SOFT"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Only for things you read out letter by letter: confirmation codes.
+const overpassMono = Overpass_Mono({
+  variable: "--font-code",
   subsets: ["latin"],
 });
 
@@ -38,8 +34,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf7f1" },
-    { media: "(prefers-color-scheme: dark)", color: "#1d1915" },
+    { media: "(prefers-color-scheme: light)", color: "#eef2f0" },
+    { media: "(prefers-color-scheme: dark)", color: "#12241f" },
   ],
 };
 
@@ -47,7 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${overpass.variable} ${overpassMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

@@ -1,9 +1,11 @@
 "use client";
 
+import { CategoryTile } from "@/components/builder/category-tile";
 import Link from "next/link";
 import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { AlarmClockIcon, CalendarXIcon, CheckIcon, ChevronDownIcon, ClipboardListIcon, ExternalLinkIcon, PartyPopperIcon } from "lucide-react";
+import { AddedBy } from "@/components/builder/item-card";
 import { ItemSheet, type ItemSheetState } from "@/components/builder/item-sheet";
 import { EmptyState } from "@/components/empty-state";
 import { BookingProgress } from "@/components/trip/booking-progress";
@@ -27,7 +29,7 @@ import {
 } from "@/lib/checklist";
 import { formatDate, formatItemWhen, plural } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
-import { CATEGORY_META, linkButtonLabel } from "@/lib/item-categories";
+import { linkButtonLabel } from "@/lib/item-categories";
 import { formatPrice } from "@/lib/money";
 import { ITEM_STATUSES, STATUS_META, type ItemStatus } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -170,8 +172,11 @@ function ChecklistGroup({
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-xl px-1 [&::-webkit-details-marker]:hidden">
         <span className={cn("size-3 shrink-0 rounded-full", meta.dot)} aria-hidden />
         <span className="min-w-0 flex-1">
-          <span className="font-heading text-lg font-semibold">
-            {meta.label} <span className="text-muted-foreground tabular-nums">· {entries.length}</span>
+          <span className="font-heading text-lg font-extrabold">
+            {meta.label}{" "}
+            <span className="ml-1 inline-grid min-w-7 place-items-center rounded-md bg-muted px-1.5 align-[2px] text-sm font-bold text-muted-foreground tabular-nums">
+              {entries.length}
+            </span>
           </span>
           <span className="block text-sm text-muted-foreground">{GROUP_HINT[status]}</span>
         </span>
@@ -226,8 +231,6 @@ function ChecklistRow({
 }) {
   const { item, urgency, daysUntil, stopName } = entry;
   const status = STATUS_META[item.status];
-  const category = CATEGORY_META[item.category];
-  const Icon = category.icon;
   const done = item.status !== "TO_BOOK";
   const when = formatItemWhen(item.startAt, item.endAt, item.allDay);
   const flag = urgency ? urgencyLabel(urgency, daysUntil) : null;
@@ -262,7 +265,7 @@ function ChecklistRow({
             className="flex w-full items-start justify-between gap-2 rounded-md text-left focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
           >
             <span className="flex min-w-0 items-start gap-2">
-              <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-label={category.label} />
+              <CategoryTile category={item.category} size="sm" />
               <span className={cn("font-medium text-pretty", item.status === "NOT_NEEDED" && "text-muted-foreground")}>
                 {item.title}
               </span>
@@ -277,6 +280,7 @@ function ChecklistRow({
               when ?? (entry.date ? `arrive ${formatDate(parseDateOnly(entry.date), { weekday: true })}` : "No date yet"),
             ].join(" · ")}
           </p>
+          <AddedBy who={item.addedBy} className="pl-6" />
 
           <div className="mt-2 flex flex-wrap items-center gap-2 pl-6">
             <DropdownMenu>

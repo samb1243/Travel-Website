@@ -1,5 +1,6 @@
 "use client";
 
+import { CategoryTile } from "@/components/builder/category-tile";
 import Link from "next/link";
 import { useState } from "react";
 import { CircleAlertIcon, PencilIcon, ReceiptTextIcon, WalletIcon } from "lucide-react";
@@ -93,10 +94,10 @@ export function BudgetView({
       <section className="space-y-3 rounded-2xl border bg-card p-4 lg:col-span-2" aria-labelledby="budget-total">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 id="budget-total" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            <h2 id="budget-total" className="text-sm font-semibold text-muted-foreground">
               Planned spend
             </h2>
-            <p className="font-heading text-3xl font-semibold tabular-nums sm:text-4xl">{money(s.total)}</p>
+            <p className="font-heading text-3xl font-extrabold tabular-nums sm:text-4xl">{money(s.total)}</p>
           </div>
           {readOnly ? null : (
             <Button asChild variant="outline" size="sm" className="h-9 shrink-0">
@@ -146,7 +147,8 @@ export function BudgetView({
       </section>
 
       {/* Booked vs still to pay */}
-      {s.total > 0 ? (
+      {/* Booking status is the owner's own business: not shown on other people's trips */}
+      {s.total > 0 && !readOnly ? (
         <Card title="How much is sorted" className="lg:col-span-2">
           <div className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-muted" aria-hidden>
             {s.byStatus.map(({ status, total }) =>
@@ -181,11 +183,10 @@ export function BudgetView({
           <ul className="space-y-3">
             {s.byCategory.map(({ category, total, count, share }) => {
               const meta = CATEGORY_META[category];
-              const Icon = meta.icon;
               return (
                 <BarRow
                   key={category}
-                  icon={<Icon className="size-4 text-muted-foreground" aria-hidden />}
+                  icon={<CategoryTile category={category} size="sm" />}
                   label={meta.label}
                   detail={plural(count, "item")}
                   amount={money(total)}
@@ -241,7 +242,6 @@ export function BudgetView({
         <Card title="Biggest costs" className="lg:col-span-2">
           <ol className="divide-y">
             {s.biggest.map((item) => {
-              const Icon = CATEGORY_META[item.category].icon;
               return (
                 <li key={item.id}>
                   <Tappable
@@ -249,13 +249,15 @@ export function BudgetView({
                     className="flex min-h-12 w-full items-center gap-3 rounded-lg px-1 py-2"
                     interactiveClassName="hover:bg-accent/50"
                   >
-                    <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <CategoryTile category={item.category} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{item.title}</span>
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span className={cn("size-2 rounded-full", STATUS_META[item.status].dot)} aria-hidden />
-                        {STATUS_META[item.status].label}
-                      </span>
+                      {readOnly ? null : (
+                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <span className={cn("size-2 rounded-full", STATUS_META[item.status].dot)} aria-hidden />
+                          {STATUS_META[item.status].label}
+                        </span>
+                      )}
                     </span>
                     <span className="shrink-0 font-medium tabular-nums">{money(item.cost!)}</span>
                   </Tappable>
@@ -283,7 +285,7 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
   return (
     <div className="min-w-0">
       <dt className="truncate text-xs text-muted-foreground">{label}</dt>
-      <dd className="font-heading text-lg font-semibold tabular-nums">{children}</dd>
+      <dd className="font-heading text-lg font-extrabold tabular-nums">{children}</dd>
     </div>
   );
 }
@@ -291,7 +293,7 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
 function Card({ title, className, children }: { title: string; className?: string; children: React.ReactNode }) {
   return (
     <section className={cn("space-y-3 rounded-2xl border bg-card p-4", className)}>
-      <h2 className="font-heading text-lg font-semibold">{title}</h2>
+      <h2 className="font-heading text-lg font-extrabold">{title}</h2>
       {children}
     </section>
   );
