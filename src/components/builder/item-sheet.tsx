@@ -26,10 +26,18 @@ import type { ItemCategory, ItemStatus, LinkKind } from "@/generated/prisma/enum
 import { ImagePicker } from "@/components/image-picker";
 import { deleteItem, saveItem } from "@/server/actions/builder";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
+import type { BookingDraft } from "@/lib/booking-email";
 import { ResponsiveSheet } from "./responsive-sheet";
 
 export type ItemSheetState =
-  | { mode: "add"; stopId: string | null; defaultDate: string; category?: ItemCategory }
+  | {
+      mode: "add";
+      stopId: string | null;
+      defaultDate: string;
+      category?: ItemCategory;
+      /** Starting values, e.g. a booking found in a confirmation email */
+      draft?: BookingDraft;
+    }
   | { mode: "edit"; item: BuilderItem }
   | null;
 
@@ -39,12 +47,15 @@ export function ItemSheet({
   stops,
   state,
   onClose,
+  onSaved,
 }: {
   tripId: string;
   currency: string;
   stops: Pick<BuilderStop, "id" | "name">[];
   state: ItemSheetState;
   onClose: () => void;
+  /** Called after a successful save (before closing) */
+  onSaved?: () => void;
 }) {
   return (
     <ResponsiveSheet
@@ -54,12 +65,13 @@ export function ItemSheet({
     >
       {state ? (
         <ItemForm
-          key={state.mode === "edit" ? state.item.id : `add-${state.stopId}`}
+          key={state.mode === "edit" ? state.item.id : `add-${state.stopId}-${state.draft?.title ?? ""}-${state.draft?.startDate ?? ""}`}
           tripId={tripId}
           currency={currency}
           stops={stops}
           state={state}
           onDone={onClose}
+          onSaved={onSaved}
         />
       ) : null}
     </ResponsiveSheet>
@@ -83,17 +95,22 @@ function ItemForm({
   stops,
   state,
   onDone,
+  onSaved,
 }: {
   tripId: string;
   currency: string;
   stops: Pick<BuilderStop, "id" | "name">[];
   state: NonNullable<ItemSheetState>;
   onDone: () => void;
+  onSaved?: () => void;
 }) {
   const item = state.mode === "edit" ? state.item : null;
-  const [category, setCategory] = useState<ItemCategory>(item?.category ?? (state.mode === "add" ? state.category : undefined) ?? "ACTIVITY");
-  const [status, setStatus] = useState<ItemStatus | null>(item ? item.status : defaultStatusFor(category));
-  const [payment, setPayment] = useState<PaymentStatus | null>(item?.payment ?? null);
+  const draft = state.mode === "add" ? state.draft : undefined;
+  const [category, setCategory] = useState<ItemCategory>(
+    item?.category ?? draft?.category ?? (state.mode === "add" ? state.category : undefined) ?? "ACTIVITY",
+  );
+  const [status, setStatus] = useState<ItemStatus | null>(item ? item.status : draft ? draft.status : defaultStatusFor(category));
+  const [payment, setPayment] = useState<PaymentStatus | null>(item?.payment ?? (draft?.payment || null));
   const purchase = isPurchaseCategory(category);
   /** Switching between a booking and gear/other changes which statuses make sense */
   function pickCategory(c: ItemCategory) {
@@ -105,9 +122,9 @@ function ItemForm({
     (item ? item.stopId : state.mode === "add" ? state.stopId : null) ?? WHOLE_TRIP,
   );
   // Free = a price of 0. An empty price means "not priced yet", which the budget treats differently.
-  const [free, setFree] = useState(item?.cost === 0);
+  const [free, setFree] = useState(item ? item.cost === 0 : draft?.cost === "0");
   // The price's currency; defaults to the trip's.
-  const [priceCurrency, setPriceCurrency] = useState(item?.currency ?? currency);
+  const [priceCurrency, setPriceCurrency] = useState(item?.currency ?? (draft?.currency || currency));
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? "");
   const [links, setLinks] = useState<LinkRow[]>(
     item?.links.map((l) => ({ key: l.id, kind: l.kind, label: l.label ?? "", url: l.url })) ?? [],
@@ -119,7 +136,7 @@ function ItemForm({
 
   const meta = CATEGORY_META[category];
   // Activities and food only ask for an end time when you want one.
-  const [addEnd, setAddEnd] = useState(Boolean(item?.endAt));
+  const [addEnd, setAddEnd] = useState(Boolean(item?.endAt || draft?.endDate));
   const showEnd = meta.fields.end === true || (meta.fields.end === "optional" && addEnd);
   const defaultDate = state.mode === "add" ? state.defaultDate : "";
 
@@ -155,6 +172,7 @@ function ItemForm({
       const result = await saveItem(tripId, item?.id ?? null, input);
       if (result.ok) {
         toast.success(item ? "Saved" : "Added");
+        onSaved?.();
         onDone();
       } else {
         setErrors(result.errors ?? {});
@@ -208,8 +226,8 @@ function ItemForm({
 
       {meta.fields.route ? (
         <div className="grid grid-cols-2 gap-3">
-          <Field id="fromPlace" name="fromPlace" label="From" defaultValue={item?.fromPlace ?? ""} error={errors.fromPlace} placeholder="Bangkok (BKK)" />
-          <Field id="toPlace" name="toPlace" label="To" defaultValue={item?.toPlace ?? ""} error={errors.toPlace} placeholder="Chiang Mai" />
+          <Field id="fromPlace" name="fromPlace" label="From" defaultValue={item?.fromPlace ?? draft?.fromPlace ?? ""} error={errors.fromPlace} placeholder="Bangkok (BKK)" />
+          <Field id="toPlace" name="toPlace" label="To" defaultValue={item?.toPlace ?? draft?.toPlace ?? ""} error={errors.toPlace} placeholder="Chiang Mai" />
         </div>
       ) : null}
 
@@ -218,20 +236,20 @@ function ItemForm({
         name="title"
         label={meta.labels.title}
         placeholder={meta.labels.titlePlaceholder}
-        defaultValue={item?.title ?? ""}
+        defaultValue={item?.title ?? draft?.title ?? ""}
         error={errors.title}
         autoFocus={!item && !meta.fields.route}
       />
 
       <div className="grid grid-cols-[1fr_auto] gap-3">
-        <Field id="startDate" name="startDate" type="date" label={meta.labels.start} defaultValue={item ? dateOf(item.startAt) : defaultDate} error={errors.startDate} />
-        <Field id="startTime" name="startTime" type="time" label="Time" defaultValue={item && !item.allDay ? timeOf(item.startAt) : ""} error={errors.startTime} className="w-32" />
+        <Field id="startDate" name="startDate" type="date" label={meta.labels.start} defaultValue={item ? dateOf(item.startAt) : draft?.startDate || defaultDate} error={errors.startDate} />
+        <Field id="startTime" name="startTime" type="time" label="Time" defaultValue={item ? (item.allDay ? "" : timeOf(item.startAt)) : (draft?.startTime ?? "")} error={errors.startTime} className="w-32" />
       </div>
       {showEnd ? (
         <div className="space-y-1.5">
           <div className="grid grid-cols-[1fr_auto] gap-3">
-            <Field id="endDate" name="endDate" type="date" label={meta.labels.end} defaultValue={dateOf(item?.endAt ?? null)} error={errors.endDate} />
-            <Field id="endTime" name="endTime" type="time" label="Time" defaultValue={timeOf(item?.endAt ?? null)} error={errors.endTime} className="w-32" />
+            <Field id="endDate" name="endDate" type="date" label={meta.labels.end} defaultValue={item ? dateOf(item.endAt) : (draft?.endDate ?? "")} error={errors.endDate} />
+            <Field id="endTime" name="endTime" type="time" label="Time" defaultValue={item ? timeOf(item.endAt) : (draft?.endTime ?? "")} error={errors.endTime} className="w-32" />
           </div>
           {meta.fields.end === "optional" ? (
             <button
@@ -297,7 +315,7 @@ function ItemForm({
             label="Cost"
             placeholder={free ? "Free" : "0"}
             disabled={free}
-            defaultValue={free ? "" : (item?.cost ?? "")}
+            defaultValue={free ? "" : (item?.cost ?? draft?.cost ?? "")}
             error={free ? undefined : errors.cost}
           />
           <div className="space-y-2">
@@ -347,7 +365,7 @@ function ItemForm({
         ) : null}
       </div>
 
-      <Field id="provider" name="provider" label={meta.labels.provider} defaultValue={item?.provider ?? ""} error={errors.provider} />
+      <Field id="provider" name="provider" label={meta.labels.provider} defaultValue={item?.provider ?? draft?.provider ?? ""} error={errors.provider} />
 
       {category === "GEAR" ? null : (
         <div className="space-y-1.5">
@@ -356,7 +374,7 @@ function ItemForm({
             name="address"
             label={meta.fields.route ? "Pick-up address (optional)" : "Address (optional)"}
             placeholder={meta.fields.route ? "e.g. Arcade Bus Station, Chiang Mai" : "e.g. 4 Decho Rd, Bangkok"}
-            defaultValue={item?.address ?? ""}
+            defaultValue={item?.address ?? draft?.address ?? ""}
             error={errors.address}
           />
           <p className="text-xs text-muted-foreground">Adds Google Maps and Apple Maps buttons to it.</p>
@@ -437,7 +455,7 @@ function ItemForm({
 
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
-        <Textarea id="notes" name="notes" rows={3} defaultValue={item?.notes ?? ""} placeholder="Tips, what to bring, how to get there…" className="text-base md:text-sm" />
+        <Textarea id="notes" name="notes" rows={3} defaultValue={item?.notes ?? draft?.notes ?? ""} placeholder="Tips, what to bring, how to get there…" className="text-base md:text-sm" />
         {errors.notes ? <p className="text-sm text-destructive">{errors.notes}</p> : null}
       </div>
 
@@ -449,7 +467,7 @@ function ItemForm({
         <p className="-mt-2 text-xs text-muted-foreground">
           Only you and the people planning this trip see these. Never shown on shared trips or copied.
         </p>
-        <Field id="confirmationCode" name="confirmationCode" label="Confirmation number" defaultValue={item?.confirmationCode ?? ""} error={errors.confirmationCode} autoComplete="off" />
+        <Field id="confirmationCode" name="confirmationCode" label="Confirmation number" defaultValue={item?.confirmationCode ?? draft?.confirmationCode ?? ""} error={errors.confirmationCode} autoComplete="off" />
         <div className="space-y-2">
           <Label htmlFor="privateNotes">Private notes</Label>
           <Textarea id="privateNotes" name="privateNotes" rows={2} defaultValue={item?.privateNotes ?? ""} placeholder="Seat numbers, door codes…" className="text-base md:text-sm" />

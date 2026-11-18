@@ -58,6 +58,7 @@ import { cn } from "@/lib/utils";
 import { deleteStop, reorderStops } from "@/server/actions/builder";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
 import { ItemCard } from "./item-card";
+import { EmailImport } from "@/components/builder/email-import";
 import { ItemSheet, type ItemSheetState } from "./item-sheet";
 import { StopSheet, type StopSheetState } from "./stop-sheet";
 
@@ -136,9 +137,12 @@ export function RouteBuilder({
           <h2 id="route-heading" className="font-heading text-xl font-extrabold">
             Route
           </h2>
-          {ordered.length ? (
-            <span className="text-sm text-muted-foreground">{plural(ordered.length, "stop")}</span>
-          ) : null}
+          <div className="flex items-center gap-3">
+            {ordered.length ? (
+              <span className="hidden text-sm text-muted-foreground sm:inline">{plural(ordered.length, "stop")}</span>
+            ) : null}
+            <EmailImport tripId={tripId} currency={currency} stops={stopOptions} />
+          </div>
         </div>
         {ordered.length ? <CategoryFilter selected={groups} onChange={setGroups} counts={groupCounts} /> : null}
 

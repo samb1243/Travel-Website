@@ -151,6 +151,26 @@ Signing in with Google using the same email as an existing password account link
 - Times are local wall-clock times where the thing happens; they never shift with your
   phone's time zone.
 
+### Import from email
+
+**Import from email** (next to the Route heading) adds bookings from a confirmation email.
+
+- Paste the email, or choose a saved `.eml` file (Gmail: ⋮ → Download message; Outlook: File →
+  Save as). A saved file is opened in your browser, so attachments never leave your device.
+- **Built-in booking data first:** many airlines, hotels, Booking.com, rail, bus and event sites
+  put the booking in the email as schema.org data (what Gmail uses for its trip cards).
+  Tripster reads flights, stays, trains, buses, ferries, car rentals, restaurants and events
+  from it. Free, and nothing leaves the server.
+- **Claude for the rest (optional):** if the email has no such data, **Read it with Claude**
+  sends the email's text (nothing else about you or the trip) to Anthropic's API and gets the
+  bookings back. Only when you press the button, and only when `ANTHROPIC_API_KEY` is set in
+  `.env` (otherwise the option doesn't appear). It uses Claude Opus 5.5 with a fixed answer
+  format and low effort, typically a few cents per email; at most 10 emails per person per hour.
+- Each booking found shows its date, the stop it was matched to (by place name, else by date)
+  and its reference. **Check & add** opens the normal item form, filled in, to check and
+  change before saving; nothing is saved until you do. Dates and times are the local times
+  in the email, and anything that isn't a valid date, time or known currency is left blank.
+
 ### Itinerary
 
 - One card per day of the trip, with where you are ("Tokyo → Kyoto" on travel days) and
@@ -330,7 +350,7 @@ private trips") are enforced, and where.
 
 **Permissions: users can only edit their own trips**
 - Every server action is a public HTTP endpoint, so each one checks the caller itself before
-  touching data, whatever the UI sends (`src/server/actions/*`). There are 25, and nothing else
+  touching data, whatever the UI sends (`src/server/actions/*`). There are 27, and nothing else
   is exported from those files (anything exported from a `"use server"` file becomes callable).
 - Access checks live in one place, `src/server/permissions.ts`: `requireTripEditor`,
   `requireStopEditor` and `requireItemEditor` allow the owner and members; `requireTripOwner`
@@ -430,7 +450,9 @@ The code leaves room for each of these:
 - **Recommendations:** stops store a stable OpenStreetMap place id (`Stop.placeId`) so trips
   through the same place can be matched; add a recommendations service behind a small
   interface, like place search in `src/server/geocode.ts`.
-- **Parse booking emails** into items (forwarding address + parser).
+- **Forward booking emails** to a personal address instead of pasting them: needs an inbound
+  email service (e.g. Postmark) once hosted; it would feed `readBookingEmail` in
+  `src/server/actions/email-import.ts`.
 
 ## Troubleshooting
 
