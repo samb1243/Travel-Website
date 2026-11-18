@@ -5,6 +5,7 @@ import { MobileTabBar } from "@/components/main-nav";
 import { ThemeSync, themeScript } from "@/components/theme";
 import { colorsScript } from "@/components/colors-cache";
 import { UserColors } from "@/components/user-colors";
+import { OfflineBanner, ServiceWorkerRegister } from "@/components/offline/service-worker";
 import { Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
@@ -60,6 +61,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <UserColors />
         </Suspense>
         <SiteHeader />
+        <OfflineBanner />
+        <ServiceWorkerRegister />
         {/* Bottom padding keeps content clear of the phone tab bar. */}
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-24 md:pb-10 print:max-w-none print:p-0">
           {children}

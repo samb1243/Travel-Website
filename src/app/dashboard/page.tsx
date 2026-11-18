@@ -13,6 +13,7 @@ import { requireUser } from "@/server/session";
 import { listMyTrips, type TripCardData } from "@/server/trips";
 import { listSavedTrips } from "@/server/shared-trips";
 import { ExploreTripCard } from "@/components/shared/explore-trip-card";
+import { OfflineSaver } from "@/components/offline/offline-saver";
 
 export const metadata: Metadata = { title: "My trips" };
 
@@ -79,6 +80,8 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "search
         </EmptyState>
       ) : (
         <>
+          {/* Keeps current and upcoming trips on this device for when there's no signal */}
+          <OfflineSaver userId={user.id} trips={current.map((t) => ({ id: t.id, title: t.title }))} />
           {current.length ? <TripGrid title="Upcoming" trips={current} today={today} /> : null}
           {past.length ? <TripGrid title="Past trips" trips={past} today={today} /> : null}
         </>

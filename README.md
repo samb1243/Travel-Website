@@ -275,6 +275,35 @@ results cached for a day, and 30 searches per user per minute. Set `NOMINATIM_US
   before you print a copy for someone else. Use your browser's Print and choose
   "Save as PDF".
 
+## Offline and the home screen
+
+Tripster can be added to a phone's home screen, where it opens like an app, and your trips
+open with no signal (read-only).
+
+- **Add to home screen:** iPhone: Safari → Share → Add to Home Screen. Android: Chrome menu →
+  Install app (or Add to Home screen). It opens on My trips.
+- **What's saved:** every trip page you open (Overview, Itinerary, Checklist, Budget, Map),
+  My trips, and shared trip pages. Opening My trips also saves your current and upcoming trips
+  (up to 8, four tabs each) in the background, and refreshes them every 6 hours. My trips
+  shows "2 trips saved for offline use · updated 5 min ago" with an **Update now** button.
+- **With no connection:** saved pages open as they were when saved, including confirmation
+  numbers and private notes (that's the point: your bookings at the border). A strip under the
+  header says you're offline, or which saved copy you're looking at. Tabs and links between
+  saved pages work. Anything not saved shows a "You're offline" page listing what is.
+  Changes (ticking things off, editing) need a connection. Map tiles need a connection too.
+- **Privacy:** copies stay on the device, in the browser's own storage. **Logging out deletes
+  them**, and if someone else logs in on the same device, the previous person's copies are
+  deleted first. Only pages you can already see are saved; the offline page itself is saved
+  signed out, so it holds nothing personal.
+- **How:** a small service worker (`public/sw.js`, no library) and `src/lib/offline.ts`. Pages
+  are network-first: always fresh when online, the saved copy only when the network fails.
+  It runs in production builds only (`npm run build && npm start`), since in development it
+  would keep serving old pages; set `NEXT_PUBLIC_OFFLINE_IN_DEV=1` to try it with `npm run dev`.
+  Icons are generated from the logo with `npx tsx scripts/make-icons.mts`.
+- **To test offline on a computer:** run the production build, open My trips twice (the first
+  visit installs the service worker), wait for "saved for offline use", then stop the server or
+  turn off Wi-Fi and open a trip.
+
 ## Planning together
 
 - **People** (button on a trip) shows everyone planning it. The owner makes an **invite link**
@@ -401,8 +430,7 @@ The code leaves room for each of these:
 - **Recommendations:** stops store a stable OpenStreetMap place id (`Stop.placeId`) so trips
   through the same place can be matched; add a recommendations service behind a small
   interface, like place search in `src/server/geocode.ts`.
-- **Parse booking emails** into items (forwarding address + parser), and a **PWA with
-  offline access** for the itinerary and confirmation numbers.
+- **Parse booking emails** into items (forwarding address + parser).
 
 ## Troubleshooting
 
