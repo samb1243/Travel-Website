@@ -220,6 +220,26 @@ results cached for a day, and 30 searches per user per minute. Set `NOMINATIM_US
   "Based on X's trip" credited. Pick a new start date and every date moves to match. On
   your own trip the button says **Duplicate**.
 
+## Calendar and print
+
+**Export** (button on a trip) has both:
+
+- **Keep it in your calendar:** "Make my calendar link" gives you a private link
+  (`/cal/<code>.ics`) that Google, Apple or Outlook Calendar subscribe to and re-check every
+  few hours. Bookings appear in local time (a 07:40 departure in Bangkok shows as 07:40,
+  wherever you are), stops as all-day events. Each person on a trip has their own link;
+  "Reset link" or "Stop syncing" turns it off, and it also stops when someone leaves or is
+  removed from the trip. Google Calendar can only subscribe once the app is online (it can't
+  reach `localhost`); Apple Calendar on the same computer, and downloads, work locally.
+- **Download a calendar file (.ics):** a one-off snapshot to import.
+- Calendar exports include confirmation numbers but never private notes (calendar services
+  keep a copy).
+- **Print or save as PDF** (`/trips/<id>/print`): a clean day-by-day itinerary with the route,
+  stays, times, confirmation numbers, private notes, what's still to book and the budget.
+  "Hide private details" removes confirmation numbers, private notes and confirmation links
+  before you print a copy for someone else. Use your browser's Print and choose
+  "Save as PDF".
+
 ## Planning together
 
 - **People** (button on a trip) shows everyone planning it. The owner makes an **invite link**
@@ -336,8 +356,7 @@ The code leaves room for each of these:
   interface, like place search in `src/server/geocode.ts`.
 - **Multi-currency:** `Item.currency` is already in the schema (null = trip currency); replace
   the rough rates in `src/lib/fx.ts` with live ones and convert in the budget maths.
-- **Parse booking emails** into items (forwarding address + parser), **PDF/ICS export** of
-  the itinerary (the day-by-day data comes from `src/lib/itinerary.ts`), and a **PWA with
+- **Parse booking emails** into items (forwarding address + parser), and a **PWA with
   offline access** for the itinerary and confirmation numbers.
 
 ## Troubleshooting

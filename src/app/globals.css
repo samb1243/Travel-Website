@@ -180,6 +180,19 @@
   }
 }
 
+/* --- Printing (the itinerary at /trips/<id>/print) ---------------------------- */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color-scheme: light;
+  }
+}
+
 /* --- Signposts (home page) --------------------------------------------------
    A yellow trail sign: a board with one pointed end. */
 .signpost {

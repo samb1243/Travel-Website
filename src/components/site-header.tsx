@@ -9,7 +9,7 @@ import { getCurrentUser } from "@/server/session";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur print:hidden">
       <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-8 self-stretch">
           <Logo />

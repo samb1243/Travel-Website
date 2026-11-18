@@ -53,7 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeSync />
         <SiteHeader />
         {/* Bottom padding keeps content clear of the phone tab bar. */}
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-24 md:pb-10">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-24 md:pb-10 print:max-w-none print:p-0">
           {children}
         </main>
         <MobileTabBar />

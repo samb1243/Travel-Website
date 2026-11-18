@@ -83,6 +83,7 @@ model User {
   memberships TripMember[]
   invites     TripInvite[]
   itemsAdded  Item[]       @relation("ItemsAdded")
+  calendarFeeds CalendarFeed[]
   sessions   Session[]
   accounts   Account[]
 }
@@ -177,6 +178,7 @@ model Trip {
   savedBy SavedTrip[]
   members TripMember[]
   invites TripInvite[]
+  calendarFeeds CalendarFeed[]
 
   @@index([ownerId, updatedAt])
   @@index([visibility, publishedAt])
@@ -305,4 +307,21 @@ model TripInvite {
   revokedAt   DateTime?
 
   @@index([tripId])
+}
+
+/// A private calendar link for one person and one trip, so Google/Apple
+/// Calendar can keep the trip in sync (/cal/<token>.ics). Works only while the
+/// person can still edit the trip. "Reset link" sets revokedAt and makes a new one.
+model CalendarFeed {
+  id        String    @id @default(cuid())
+  tripId    String
+  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Unguessable; anyone holding it can read the trip's calendar
+  token     String    @unique
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  @@index([tripId, userId])
 }

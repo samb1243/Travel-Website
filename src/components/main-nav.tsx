@@ -65,7 +65,7 @@ function MobileTabBarLinks({ pathname }: { pathname: string }) {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 bg-[#1c3a32] pb-[env(safe-area-inset-bottom)] text-[#e6eeea] md:hidden dark:border-t dark:bg-card"
+      className="fixed inset-x-0 bottom-0 z-40 bg-[#1c3a32] pb-[env(safe-area-inset-bottom)] text-[#e6eeea] md:hidden dark:border-t dark:bg-card print:hidden"
     >
       <ul className="grid grid-cols-3">
         {NAV_LINKS.map(({ href, label, icon: Icon }) => {

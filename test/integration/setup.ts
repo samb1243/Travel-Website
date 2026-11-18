@@ -20,6 +20,12 @@ vi.mock("next/navigation", async () => {
 
 vi.mock("next/cache", () => ({ revalidatePath: () => {}, revalidateTag: () => {} }));
 
+// Route handlers call connection() to mark themselves as request-time; there's no request here.
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  connection: async () => {},
+}));
+
 // The signed-in user is whoever the test says (see signInAs in helpers.ts).
 vi.mock("@/server/session", async () => {
   const { RedirectError } = await import("./errors");

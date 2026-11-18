@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { CalendarIcon, PencilIcon } from "lucide-react";
 import { TripCover } from "@/components/trip/trip-cover";
+import { ExportDialog } from "@/components/trip/export-dialog";
 import { PeopleDialog } from "@/components/trip/people-dialog";
 import { ShareDialog } from "@/components/trip/share-dialog";
 import { TripTabs } from "@/components/trip/trip-tabs";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateRange, plural } from "@/lib/format";
 import { formatTripTypes, primaryTripType, TRIP_TYPE_META, VISIBILITY_META } from "@/lib/trip-types";
+import { getActiveFeedToken } from "@/server/calendar";
 import { getTripPeople } from "@/server/people";
 import { loadEditorTrip } from "@/server/trip-page";
 
@@ -25,7 +27,7 @@ export default function TripLayout({ children, params }: LayoutProps<"/trips/[id
 
 async function TripHeader({ params }: { params: Promise<{ id: string }> }) {
   const { trip, user } = await loadEditorTrip(params);
-  const people = await getTripPeople(trip.id, user.id);
+  const [people, feedToken] = await Promise.all([getTripPeople(trip.id, user.id), getActiveFeedToken(trip.id, user.id)]);
   const typeMeta = TRIP_TYPE_META[primaryTripType(trip.types)];
   const vis = VISIBILITY_META[trip.visibility];
   const VisIcon = vis.icon;
@@ -72,6 +74,7 @@ async function TripHeader({ params }: { params: Promise<{ id: string }> }) {
           <PeopleDialog tripId={trip.id} viewerId={user.id} isOwner={trip.isOwner} {...people} />
           {/* Only the owner decides who can see the trip */}
           {trip.isOwner ? <ShareDialog tripId={trip.id} slug={trip.slug} visibility={trip.visibility} /> : null}
+          <ExportDialog tripId={trip.id} feedToken={feedToken} />
           <Button asChild variant="outline" size="lg" className="h-11 rounded-xl border-2 px-4 font-bold">
             <Link href={`/trips/${trip.id}/edit`}>
               <PencilIcon aria-hidden /> Edit
