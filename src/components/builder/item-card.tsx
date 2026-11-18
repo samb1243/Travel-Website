@@ -7,7 +7,10 @@ import { toast } from "sonner";
 import { ArrowRightIcon, CheckIcon, CopyIcon, LockIcon } from "lucide-react";
 import { LINK_KIND_META, linkButtonLabel } from "@/lib/item-categories";
 import { formatItemWhen } from "@/lib/format";
+import { mapLinksFor } from "@/lib/map-links";
+import { ItemPhoto } from "@/components/builder/item-photo";
 import { STATUS_META } from "@/lib/status";
+import { AddConfirmationChip, MapLinks, StatusBadges } from "@/components/builder/status-badges";
 import { cn } from "@/lib/utils";
 import { Tappable } from "@/components/tappable";
 import { initials } from "@/components/user-avatar";
@@ -26,12 +29,12 @@ export function ItemCard({
   /** Booking status is the owner's own business: hidden on other people's trips */
   showStatus?: boolean;
 }) {
-  const status = STATUS_META[item.status];
+  const status = item.status ? STATUS_META[item.status] : null;
   const when = formatItemWhen(item.startAt, item.endAt, item.allDay);
   const showRoute = item.fromPlace && item.toPlace && item.title !== `${item.fromPlace} → ${item.toPlace}`;
 
   return (
-    <div className={cn("rounded-xl border bg-card", showStatus && cn("border-l-[5px]", status.border))}>
+    <div className={cn("rounded-xl border bg-card", showStatus && status && cn("border-l-[5px]", status.border))}>
       <Tappable
         onClick={onEdit}
         label={`Edit ${item.title}`}
@@ -55,19 +58,24 @@ export function ItemCard({
               {[when, item.provider].filter(Boolean).join(" · ")}
             </span>
           ) : null}
-          {item.notes ? <span className="line-clamp-3 block text-sm text-pretty whitespace-pre-line">{item.notes}</span> : null}
-          {showStatus ? (
-            <span className={cn("mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium", status.badge)}>
-              <span aria-hidden>{status.emoji}</span> {status.label}
-            </span>
-          ) : null}
+          {item.address ? <span className="block text-sm text-muted-foreground">{item.address}</span> : null}
+          {item.notes ? <span className="block text-sm text-pretty whitespace-pre-line">{item.notes}</span> : null}
+          {showStatus ? <StatusBadges status={item.status} payment={item.payment} /> : null}
           <AddedBy who={item.addedBy} />
         </span>
       </Tappable>
 
-      {item.links.length || item.confirmationCode ? (
+      {item.imageUrl ? (
+        <div className="px-3 pb-3">
+          <ItemPhoto src={item.imageUrl} alt={item.title} />
+        </div>
+      ) : null}
+
+      {item.links.length || item.confirmationCode || item.needsOwnConfirmation || mapLinksFor(item).length ? (
         <div className="flex flex-wrap gap-2 px-3 pb-3">
+          {item.needsOwnConfirmation && onEdit ? <AddConfirmationChip onClick={onEdit} className="h-10 rounded-lg px-3 text-sm" /> : null}
           {item.confirmationCode ? <CopyCode code={item.confirmationCode} /> : null}
+          <MapLinks item={item} className="contents" />
           {item.links.map((l) => {
             const LinkIcon = LINK_KIND_META[l.kind].icon;
             return (

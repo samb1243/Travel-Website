@@ -9,6 +9,7 @@ import {
   deleteStop,
   reorderStops,
   saveItem,
+  setItemPayment,
   setItemStatus,
   updateStop,
 } from "@/server/actions/builder";
@@ -106,6 +107,7 @@ describe("someone else's trip, signed in as a different user", () => {
     ["saveItem (new item)", (f) => saveItem(f.trip.id, null, itemInput(null))],
     ["saveItem (edit item)", (f) => saveItem(f.trip.id, f.item.id, itemInput(null))],
     ["setItemStatus", (f) => setItemStatus(f.item.id, "TO_BOOK")],
+    ["setItemPayment", (f) => setItemPayment(f.item.id, "PAID")],
     ["deleteItem", (f) => deleteItem(f.item.id)],
     ["updateTrip", (f) => updateTrip(f.trip.id, {}, tripForm("Hijacked"))],
     ["deleteTrip", (f) => deleteTrip(f.trip.id)],
@@ -169,7 +171,8 @@ describe("the owner", () => {
   it("can do everything on their own trip", async () => {
     expect(await addStop(fixture.trip.id, stopInput)).toMatchObject({ ok: true });
     expect(await saveItem(fixture.trip.id, null, itemInput(fixture.stop.id))).toMatchObject({ ok: true });
-    expect(await setItemStatus(fixture.item.id, "PAY_ON_ARRIVAL")).toMatchObject({ ok: true });
+    expect(await setItemStatus(fixture.item.id, "NOT_NEEDED")).toMatchObject({ ok: true });
+    expect(await setItemPayment(fixture.item.id, "PAY_ON_ARRIVAL")).toMatchObject({ ok: true });
     expect(await setVisibility(fixture.trip.id, "UNLISTED")).toMatchObject({ ok: true });
     expect((await db.trip.findUnique({ where: { id: fixture.trip.id } }))?.visibility).toBe("UNLISTED");
   });
@@ -189,6 +192,7 @@ describe("signed out", () => {
     ["reorderStops", () => reorderStops(fixture.trip.id, [fixture.stop.id])],
     ["saveItem", () => saveItem(fixture.trip.id, null, itemInput(null))],
     ["setItemStatus", () => setItemStatus(fixture.item.id, "TO_BOOK")],
+    ["setItemPayment", () => setItemPayment(fixture.item.id, "PAID")],
     ["deleteItem", () => deleteItem(fixture.item.id)],
     ["createTrip", () => createTrip({}, tripForm("Anonymous"))],
     ["updateTrip", () => updateTrip(fixture.trip.id, {}, tripForm("Anonymous"))],

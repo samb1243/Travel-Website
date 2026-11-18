@@ -10,11 +10,20 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CATEGORY_META, GROUP_META, ITEM_CATEGORIES, itemGroup, LINK_KIND_META, LINK_KINDS } from "@/lib/item-categories";
-import { ITEM_STATUSES, STATUS_META } from "@/lib/status";
+import {
+  defaultStatusFor,
+  isPurchaseCategory,
+  PAYMENT_META,
+  PAYMENT_STATUSES,
+  STATUS_META,
+  statusesFor,
+  type PaymentStatus,
+} from "@/lib/status";
 import { MAX_LINKS } from "@/lib/validation/item";
 import { CURRENCIES } from "@/lib/currencies";
 import { cn } from "@/lib/utils";
 import type { ItemCategory, ItemStatus, LinkKind } from "@/generated/prisma/enums";
+import { ImagePicker } from "@/components/image-picker";
 import { deleteItem, saveItem } from "@/server/actions/builder";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
 import { ResponsiveSheet } from "./responsive-sheet";
@@ -83,7 +92,14 @@ function ItemForm({
 }) {
   const item = state.mode === "edit" ? state.item : null;
   const [category, setCategory] = useState<ItemCategory>(item?.category ?? (state.mode === "add" ? state.category : undefined) ?? "ACTIVITY");
-  const [status, setStatus] = useState<ItemStatus>(item?.status ?? "TO_BOOK");
+  const [status, setStatus] = useState<ItemStatus | null>(item ? item.status : defaultStatusFor(category));
+  const [payment, setPayment] = useState<PaymentStatus | null>(item?.payment ?? null);
+  const purchase = isPurchaseCategory(category);
+  /** Switching between a booking and gear/other changes which statuses make sense */
+  function pickCategory(c: ItemCategory) {
+    setCategory(c);
+    if (isPurchaseCategory(c) !== purchase) setStatus(defaultStatusFor(c));
+  }
   // Which stop it belongs to; WHOLE_TRIP = not tied to a stop.
   const [stopId, setStopId] = useState<string>(
     (item ? item.stopId : state.mode === "add" ? state.stopId : null) ?? WHOLE_TRIP,
@@ -92,6 +108,7 @@ function ItemForm({
   const [free, setFree] = useState(item?.cost === 0);
   // The price's currency; defaults to the trip's.
   const [priceCurrency, setPriceCurrency] = useState(item?.currency ?? currency);
+  const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? "");
   const [links, setLinks] = useState<LinkRow[]>(
     item?.links.map((l) => ({ key: l.id, kind: l.kind, label: l.label ?? "", url: l.url })) ?? [],
   );
@@ -123,7 +140,10 @@ function ItemForm({
       toPlace: meta.fields.route ? get("toPlace") : "",
       cost: free ? "0" : get("cost"),
       currency: free || priceCurrency === currency ? "" : priceCurrency,
-      status,
+      status: status ?? ("" as const),
+      payment: purchase ? ("" as const) : (payment ?? ("" as const)),
+      address: category === "GEAR" ? "" : get("address"),
+      imageUrl,
       confirmationCode: get("confirmationCode"),
       notes: get("notes"),
       privateNotes: get("privateNotes"),
@@ -177,7 +197,7 @@ function ItemForm({
                   active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-accent",
                 )}
               >
-                <input type="radio" name="category" value={c} checked={active} onChange={() => setCategory(c)} className="sr-only" />
+                <input type="radio" name="category" value={c} checked={active} onChange={() => pickCategory(c)} className="sr-only" />
                 <Icon className={cn("size-4", !active && GROUP_META[itemGroup(c)].text)} aria-hidden />
                 {m.label}
               </label>
@@ -230,29 +250,42 @@ function ItemForm({
       ) : null}
       <p className="-mt-3 text-xs text-muted-foreground">Times are local to where it happens. Leave the time empty for an all-day item.</p>
 
-      {/* Status */}
+      {/* Status: booked / to book / no booking needed, or for gear and other bought / to buy / already have */}
       <fieldset className="min-w-0 space-y-2">
-        <legend className="text-sm font-medium">Booking status</legend>
-        <div className="grid grid-cols-2 gap-2">
-          {ITEM_STATUSES.map((s) => {
-            const m = STATUS_META[s];
-            const active = s === status;
-            return (
-              <label
-                key={s}
-                className={cn(
-                  "flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm font-medium transition-colors has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
-                  active ? m.badge : "bg-card text-muted-foreground hover:bg-accent",
-                )}
-              >
-                <input type="radio" name="status" value={s} checked={active} onChange={() => setStatus(s)} className="sr-only" />
-                <span aria-hidden>{m.emoji}</span>
-                {m.label}
-              </label>
-            );
-          })}
+        <legend className="text-sm font-medium">{purchase ? "Status (optional)" : "Booking"}</legend>
+        <div className="flex flex-wrap gap-2">
+          {statusesFor(category).map((s) => (
+            <ChoiceChip
+              key={s}
+              label={STATUS_META[s].label}
+              emoji={STATUS_META[s].emoji}
+              activeClass={STATUS_META[s].badge}
+              active={s === status}
+              // Gear status is optional: tap the chosen one again to clear it
+              onClick={() => setStatus(purchase && s === status ? null : s)}
+            />
+          ))}
         </div>
+        {errors.status ? <p className="text-sm text-destructive">{errors.status}</p> : null}
       </fieldset>
+
+      {purchase ? null : (
+        <fieldset className="min-w-0 space-y-2">
+          <legend className="text-sm font-medium">Payment (optional)</legend>
+          <div className="flex flex-wrap gap-2">
+            {PAYMENT_STATUSES.map((p) => (
+              <ChoiceChip
+                key={p}
+                label={PAYMENT_META[p].label}
+                emoji={PAYMENT_META[p].emoji}
+                activeClass={PAYMENT_META[p].badge}
+                active={p === payment}
+                onClick={() => setPayment(p === payment ? null : p)}
+              />
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       <div className="space-y-2">
         <div className="grid grid-cols-[1fr_auto] items-end gap-3">
@@ -315,6 +348,22 @@ function ItemForm({
       </div>
 
       <Field id="provider" name="provider" label={meta.labels.provider} defaultValue={item?.provider ?? ""} error={errors.provider} />
+
+      {category === "GEAR" ? null : (
+        <div className="space-y-1.5">
+          <Field
+            id="address"
+            name="address"
+            label={meta.fields.route ? "Pick-up address (optional)" : "Address (optional)"}
+            placeholder={meta.fields.route ? "e.g. Arcade Bus Station, Chiang Mai" : "e.g. 4 Decho Rd, Bangkok"}
+            defaultValue={item?.address ?? ""}
+            error={errors.address}
+          />
+          <p className="text-xs text-muted-foreground">Adds Google Maps and Apple Maps buttons to it.</p>
+        </div>
+      )}
+
+      <ImagePicker value={imageUrl} onChange={setImageUrl} label="Photo (optional)" error={errors.imageUrl} />
 
       {/* Links */}
       <fieldset className="min-w-0 space-y-2">
@@ -441,5 +490,35 @@ function ItemForm({
         ) : null}
       </div>
     </form>
+  );
+}
+
+/** A toggle chip for a status: pressed when chosen. */
+function ChoiceChip({
+  label,
+  emoji,
+  active,
+  activeClass,
+  onClick,
+}: {
+  label: string;
+  emoji: string;
+  active: boolean;
+  activeClass: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "flex min-h-11 flex-auto items-center justify-center gap-1.5 rounded-xl border px-3 text-sm leading-tight font-medium whitespace-nowrap transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+        active ? cn(activeClass, "font-semibold") : "bg-card text-muted-foreground hover:bg-accent",
+      )}
+    >
+      <span aria-hidden>{emoji}</span>
+      {label}
+    </button>
   );
 }

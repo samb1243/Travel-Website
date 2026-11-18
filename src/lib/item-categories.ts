@@ -100,34 +100,18 @@ export function linkButtonLabel(link: { kind: LinkKind; label: string | null; ur
 }
 
 // --- Colour groups ----------------------------------------------------------------
-// What kind of thing an item is, as a colour on its icon. Chosen to stay clear of
-// the booking-status colours (green, light blue, amber, grey in src/lib/status.ts)
-// and of trail yellow, which is reserved for the route.
+// What kind of thing an item is, as a colour on its icon. The colours are CSS
+// variables (src/lib/colors.ts) that people can change; the defaults stay clear
+// of the status colours and of trail yellow, which is reserved for the route.
 
 export const ITEM_GROUPS = ["TRAVEL", "STAY", "DO", "KIT"] as const;
 export type ItemGroup = (typeof ITEM_GROUPS)[number];
 
 export const GROUP_META: Record<ItemGroup, { label: string; tile: string; text: string }> = {
-  TRAVEL: {
-    label: "Getting around",
-    tile: "bg-[#4f46e5] text-white dark:bg-[#6c6ef2]", // indigo
-    text: "text-[#4f46e5] dark:text-[#9a9cf7]",
-  },
-  STAY: {
-    label: "Places to stay",
-    tile: "bg-[#b0308c] text-white dark:bg-[#c94ba6]", // magenta
-    text: "text-[#b0308c] dark:text-[#e48ccb]",
-  },
-  DO: {
-    label: "Things to do",
-    tile: "bg-[#d23a52] text-white dark:bg-[#e2566c]", // rose
-    text: "text-[#d23a52] dark:text-[#f2909f]",
-  },
-  KIT: {
-    label: "Gear & admin",
-    tile: "bg-[#8a5a36] text-white dark:bg-[#a87048]", // leather brown
-    text: "text-[#8a5a36] dark:text-[#d4a27c]",
-  },
+  TRAVEL: { label: "Getting around", tile: "bg-(--k-travel) text-(--k-travel-fg)", text: "text-(--k-travel-ink)" },
+  STAY: { label: "Places to stay", tile: "bg-(--k-stay) text-(--k-stay-fg)", text: "text-(--k-stay-ink)" },
+  DO: { label: "Things to do", tile: "bg-(--k-do) text-(--k-do-fg)", text: "text-(--k-do-ink)" },
+  KIT: { label: "Gear & admin", tile: "bg-(--k-kit) text-(--k-kit-fg)", text: "text-(--k-kit-ink)" },
 };
 
 const CATEGORY_GROUP: Record<ItemCategory, ItemGroup> = {

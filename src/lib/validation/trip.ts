@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CURRENCY_CODES } from "@/lib/currencies";
 import { daysBetween } from "@/lib/dates";
-import { optionalDate as dateOnly, optionalMoney as money, optionalText } from "./common";
+import { optionalDate as dateOnly, optionalMoney as money, optionalText, optionalImageUrl } from "./common";
 import { MAX_TRIP_TYPES, normaliseTripTypes, TRIP_TYPES } from "@/lib/trip-types";
 
 export const tripSchema = z
@@ -22,9 +22,7 @@ export const tripSchema = z
       .min(1, "At least 1 traveller")
       .max(50, "50 travellers at most"),
     description: optionalText(2000, "Keep it under 2,000 characters"),
-    coverImageUrl: z
-      .union([z.literal(""), z.url({ protocol: /^https$/, message: "Use an https:// image link" }).max(1000)])
-      .transform((v) => (v === "" ? null : v)),
+    coverImageUrl: optionalImageUrl,
   })
   .superRefine((t, ctx) => {
     if (!!t.startDate !== !!t.endDate) {

@@ -3,10 +3,21 @@
 
 import { daysBetween, parseDateOnly } from "@/lib/dates";
 import { fromCents, toCents } from "@/lib/money";
-import { ITEM_STATUSES, type ItemStatus } from "@/lib/status";
+import { effectivePayment, type ItemStatus, type PaymentStatus } from "@/lib/status";
 import type { ItemCategory } from "@/generated/prisma/enums";
 
-type ItemLike = { id: string; stopId: string | null; category: ItemCategory; status: ItemStatus; cost: number | null };
+type ItemLike = {
+  id: string;
+  stopId: string | null;
+  category: ItemCategory;
+  status: ItemStatus | null;
+  payment: PaymentStatus | null;
+  cost: number | null;
+};
+
+/** Payment sections on the budget: UNSET = priced, but nobody said how it's paid */
+export const BUDGET_PAYMENT_ORDER = ["PAID", "PAY_ON_ARRIVAL", "TO_PAY", "UNSET"] as const;
+export type BudgetPaymentGroup = (typeof BUDGET_PAYMENT_ORDER)[number];
 type StopLike = { id: string; name: string; arriveOn: string | null; departOn: string | null };
 
 export type BudgetLevel = "none" | "under" | "near" | "over";
@@ -25,7 +36,8 @@ export type BudgetSummary<T> = {
   perPerson: number | null;
   perDay: number | null;
   perPersonPerDay: number | null;
-  byStatus: { status: ItemStatus; total: number; count: number }[];
+  /** Spend split by payment (bought gear counts as paid), in BUDGET_PAYMENT_ORDER */
+  byPayment: { payment: BudgetPaymentGroup; total: number; count: number }[];
   /** Categories with a cost, biggest first */
   byCategory: { category: ItemCategory; total: number; count: number; share: number }[];
   /**
@@ -69,9 +81,10 @@ export function summariseBudget<T extends ItemLike>(
   const travellers = Math.max(1, trip.travellers);
   const days = trip.durationDays && trip.durationDays > 0 ? trip.durationDays : null;
 
-  const byStatus = ITEM_STATUSES.map((status) => {
-    const list = items.filter((i) => i.status === status);
-    return { status, total: fromCents(list.reduce((s, i) => s + cents.get(i.id)!, 0)), count: list.length };
+  const priced = items.filter((i) => cents.get(i.id)! > 0);
+  const byPayment = BUDGET_PAYMENT_ORDER.map((payment) => {
+    const list = priced.filter((i) => (effectivePayment(i) ?? "UNSET") === payment);
+    return { payment, total: fromCents(list.reduce((s, i) => s + cents.get(i.id)!, 0)), count: list.length };
   });
 
   const catTotals = new Map<ItemCategory, { cents: number; count: number }>();
@@ -126,7 +139,7 @@ export function summariseBudget<T extends ItemLike>(
     perPerson: divide(totalCents, travellers),
     perDay: divide(totalCents, days),
     perPersonPerDay: divide(totalCents, days ? days * travellers : null),
-    byStatus,
+    byPayment,
     byCategory,
     byStop,
     biggest,

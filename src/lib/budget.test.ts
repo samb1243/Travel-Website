@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ItemCategory } from "@/generated/prisma/enums";
-import type { ItemStatus } from "@/lib/status";
+import type { ItemStatus, PaymentStatus } from "@/lib/status";
 import { budgetLevel, nightsAt, summariseBudget } from "./budget";
 
 const stops = [
@@ -9,12 +9,19 @@ const stops = [
 ];
 
 let n = 0;
-const item = (category: ItemCategory, cost: number | null, stopId: string | null = null, status: ItemStatus = "BOOKED") => ({
+const item = (
+  category: ItemCategory,
+  cost: number | null,
+  stopId: string | null = null,
+  status: ItemStatus | null = "BOOKED",
+  payment: PaymentStatus | null = status === "BOOKED" ? "PAID" : null,
+) => ({
   id: `i${++n}`,
   category,
   cost,
   stopId,
   status,
+  payment,
 });
 
 describe("budgetLevel", () => {
@@ -41,9 +48,9 @@ describe("summariseBudget", () => {
     item("FLIGHT", 640, null),
     item("ACCOMMODATION", 48, "bkk"),
     item("ACTIVITY", 0.1, "bkk", "TO_BOOK"),
-    item("ACTIVITY", 0.2, "bkk", "PAY_ON_ARRIVAL"),
+    item("ACTIVITY", 0.2, "bkk", "BOOKED", "PAY_ON_ARRIVAL"),
     item("FOOD", 15, "cnx", "NOT_NEEDED"),
-    item("GEAR", null, "cnx", "NOT_NEEDED"),
+    item("GEAR", null, "cnx", "HAVE"),
   ];
   const summary = summariseBudget(items, stops, { budget: 1000, travellers: 2, durationDays: 10 });
 
@@ -60,13 +67,18 @@ describe("summariseBudget", () => {
     expect(summary.perPersonPerDay).toBe(35.17); // 35.165 rounds half up in cents
   });
 
-  it("splits by status, keeping every status", () => {
-    expect(summary.byStatus).toEqual([
-      { status: "BOOKED", total: 688, count: 2 },
-      { status: "PAY_ON_ARRIVAL", total: 0.2, count: 1 },
-      { status: "TO_BOOK", total: 0.1, count: 1 },
-      { status: "NOT_NEEDED", total: 15, count: 2 },
+  it("splits priced items by payment, keeping every section", () => {
+    expect(summary.byPayment).toEqual([
+      { payment: "PAID", total: 688, count: 2 },
+      { payment: "PAY_ON_ARRIVAL", total: 0.2, count: 1 },
+      { payment: "TO_PAY", total: 0, count: 0 },
+      { payment: "UNSET", total: 15.1, count: 2 },
     ]);
+  });
+
+  it("counts gear to buy as still to pay", () => {
+    const s = summariseBudget([item("GEAR", 40, null, "TO_BUY")], stops, { budget: null, travellers: 1, durationDays: null });
+    expect(s.byPayment[2]).toEqual({ payment: "TO_PAY", total: 40, count: 1 });
   });
 
   it("splits by category, biggest first, skipping categories with no cost", () => {

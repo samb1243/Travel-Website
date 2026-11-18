@@ -83,7 +83,7 @@ describe("Explore", () => {
   });
 
   it("keeps private trips out even when every filter matches them", async () => {
-    const { trips } = await listPublicTrips(parseExploreFilters({ country: "PT", type: "OTHER", length: "week" }));
+    const { trips } = await listPublicTrips(parseExploreFilters({ country: "PT", continent: "EU", type: "OTHER", minDays: "1", maxDays: "10" }));
     expect(trips.map((t) => t.id)).not.toContain(priv.trip.id);
   });
 
@@ -91,6 +91,33 @@ describe("Explore", () => {
     await makeTrip(owner.id, "PRIVATE", "Hidden");
     await db.trip.updateMany({ where: { title: "Hidden" }, data: { countryCodes: ["KP"] } });
     expect(await listExploreCountries()).not.toContain("KP");
+  });
+
+  it("leaves out your own trips and ones you plan together", async () => {
+    const shared = await makeTrip(owner.id, "PUBLIC", "Planned together");
+    await db.tripMember.create({ data: { tripId: shared.trip.id, userId: viewer.id } });
+    const mineToo = await makeTrip(viewer.id, "PUBLIC", "Viewer's own");
+
+    const forViewer = (await listPublicTrips(parseExploreFilters({}), { id: viewer.id, homeCurrency: "EUR" })).trips.map((t) => t.id);
+    expect(forViewer).toContain(pub.trip.id);
+    expect(forViewer).not.toContain(mineToo.trip.id);
+    expect(forViewer).not.toContain(shared.trip.id);
+    // Everyone else still sees them
+    expect((await listPublicTrips(parseExploreFilters({}))).trips.map((t) => t.id)).toContain(mineToo.trip.id);
+  });
+
+  it("filters by countries, days and budget per person in the viewer's currency", async () => {
+    // pub: Lisbon (PT), 1-5 May 2027, €300 for 1 traveller
+    const ids = async (q: Record<string, string>, homeCurrency = "EUR") =>
+      (await listPublicTrips(parseExploreFilters(q), { id: null, homeCurrency })).trips.map((t) => t.id);
+    expect(await ids({ continent: "EU" })).toContain(pub.trip.id);
+    expect(await ids({ continent: "AS" })).not.toContain(pub.trip.id);
+    expect(await ids({ country: "JP,PT" })).toContain(pub.trip.id);
+    expect(await ids({ minDays: "5", maxDays: "5" })).toContain(pub.trip.id);
+    expect(await ids({ minDays: "6" })).not.toContain(pub.trip.id);
+    expect(await ids({ maxBudget: "300" })).toContain(pub.trip.id);
+    expect(await ids({ maxBudget: "299" })).not.toContain(pub.trip.id);
+    expect(await ids({ minBudget: "100", maxBudget: "500", cur: "EUR" })).toContain(pub.trip.id);
   });
 });
 

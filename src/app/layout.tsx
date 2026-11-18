@@ -3,6 +3,9 @@ import { Overpass, Overpass_Mono } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import { MobileTabBar } from "@/components/main-nav";
 import { ThemeSync, themeScript } from "@/components/theme";
+import { colorsScript } from "@/components/colors-cache";
+import { UserColors } from "@/components/user-colors";
+import { Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
 import "./globals.css";
@@ -48,9 +51,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: colorsScript }} />
       </head>
       <body className="flex min-h-full flex-col">
         <ThemeSync />
+        {/* The person's own colour coding (Profile → Colours) */}
+        <Suspense fallback={null}>
+          <UserColors />
+        </Suspense>
         <SiteHeader />
         {/* Bottom padding keeps content clear of the phone tab bar. */}
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-24 md:pb-10 print:max-w-none print:p-0">

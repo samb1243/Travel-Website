@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { exploreHref, hasFilters, PAGE_SIZE, parseExploreFilters } from "@/lib/explore";
 import { plural } from "@/lib/format";
 import { listExploreCountries, listPublicTrips } from "@/server/shared-trips";
+import { getCurrentUser } from "@/server/session";
 
 export const metadata: Metadata = {
   title: "Explore trips",
@@ -31,14 +32,20 @@ export default function ExplorePage({ searchParams }: PageProps<"/explore">) {
 }
 
 async function Results({ searchParams }: Pick<PageProps<"/explore">, "searchParams">) {
-  const filters = parseExploreFilters(await searchParams);
-  const [{ trips, total }, countries] = await Promise.all([listPublicTrips(filters), listExploreCountries()]);
+  const [filters, user] = await Promise.all([searchParams.then(parseExploreFilters), getCurrentUser()]);
+  const viewer = { id: user?.id ?? null, homeCurrency: user?.homeCurrency ?? "EUR" };
+  const [{ trips, total }, countries] = await Promise.all([listPublicTrips(filters, viewer), listExploreCountries(viewer.id)]);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="space-y-6">
       {/* key: reset the selects when the URL changes (e.g. Clear filters) */}
-      <ExploreFilters key={exploreHref({ ...filters, page: 1 })} filters={filters} countries={countries} />
+      <ExploreFilters
+        key={exploreHref({ ...filters, page: 1 })}
+        filters={filters}
+        countries={countries}
+        homeCurrency={viewer.homeCurrency}
+      />
 
       {trips.length === 0 ? (
         <EmptyState
@@ -53,7 +60,7 @@ async function Results({ searchParams }: Pick<PageProps<"/explore">, "searchPara
           }
         >
           {hasFilters(filters)
-            ? "Try a different length or budget, or any country."
+            ? "Try a wider range of days or budget, or more countries."
             : "When travellers make a trip public, it shows up here for anyone to copy."}
         </EmptyState>
       ) : (

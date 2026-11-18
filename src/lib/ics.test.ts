@@ -12,6 +12,8 @@ const item = (over: Partial<CalendarItem>): CalendarItem => ({
   fromPlace: null,
   toPlace: null,
   status: "BOOKED",
+  payment: "PAID",
+  address: null,
   confirmationCode: null,
   notes: null,
   links: [],

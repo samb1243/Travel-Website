@@ -2,9 +2,9 @@ import "server-only";
 import { cache } from "react";
 import { db } from "@/lib/db";
 import { toDateOnly } from "@/lib/dates";
-import { BUDGETS, LENGTHS, PAGE_SIZE, type ExploreFilters } from "@/lib/explore";
+import { countryScope, PAGE_SIZE, type ExploreFilters } from "@/lib/explore";
 import { canViewTrip, stripPersonal, type CopySource } from "@/lib/sharing";
-import { APPROX_RATES, costInTripCurrency, type RateTable } from "@/lib/convert";
+import { APPROX_RATES, convertAmount, costInTripCurrency, type RateTable } from "@/lib/convert";
 import { getRates } from "@/server/rates";
 import type { Prisma } from "@/generated/prisma/client";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
@@ -74,6 +74,9 @@ const sharedTripSelect = {
       cost: true,
       currency: true,
       status: true,
+      payment: true,
+      address: true,
+      imageUrl: true,
       notes: true,
       links: {
         where: { kind: { not: "CONFIRMATION" } },
@@ -108,6 +111,10 @@ function toSharedItem(i: SharedTripRow["items"][number], tripCurrency: string, r
     currency: i.currency,
     costInTripCurrency: costInTripCurrency(i.cost, i.currency, tripCurrency, rates),
     status: i.status,
+    payment: i.payment,
+    address: i.address,
+    imageUrl: i.imageUrl,
+    needsOwnConfirmation: false,
     notes: i.notes,
     links: i.links.map((l) => ({ id: l.id, kind: l.kind, label: l.label, url: l.url })),
     addedBy: null, // group members' names are never shown on public pages
@@ -184,6 +191,19 @@ export type SharedTrip = NonNullable<Awaited<ReturnType<typeof getSharedTrip>>>;
 export async function getCopySource(tripId: string, viewerId: string): Promise<CopySource | null> {
   const trip = await findViewable({ id: tripId }, viewerId);
   if (!trip) return null;
+  // Only *whether* each item had a confirmation is used (to remind the new
+  // traveller to add theirs); the numbers and links themselves are never read.
+  const confirmed = new Set(
+    (
+      await db.item.findMany({
+        where: {
+          tripId: trip.id,
+          OR: [{ confirmationCode: { not: null } }, { links: { some: { kind: "CONFIRMATION" } } }],
+        },
+        select: { id: true },
+      })
+    ).map((i) => i.id),
+  );
   return {
     id: trip.id,
     ownerId: trip.ownerId,
@@ -198,7 +218,11 @@ export async function getCopySource(tripId: string, viewerId: string): Promise<C
     budget: trip.budget === null ? null : Number(trip.budget),
     travellers: trip.travellers,
     stops: trip.stops,
-    items: trip.items.map((i) => ({ ...i, cost: i.cost === null ? null : Number(i.cost) })),
+    items: trip.items.map((i) => ({
+      ...i,
+      cost: i.cost === null ? null : Number(i.cost),
+      hadConfirmation: confirmed.has(i.id),
+    })),
   };
 }
 
@@ -230,23 +254,38 @@ export type ExploreCard = {
   authorName: string;
 };
 
-function exploreWhere(f: ExploreFilters): Prisma.TripWhereInput {
+/** Who's looking: their own trips (and ones they plan together) are left out, and budgets are in their currency. */
+export type ExploreViewer = { id: string | null; homeCurrency: string };
+
+async function exploreWhere(f: ExploreFilters, viewer: ExploreViewer): Promise<Prisma.TripWhereInput> {
   const where: Prisma.TripWhereInput = { visibility: "PUBLIC" }; // unlisted trips never appear here
+  const and: Prisma.TripWhereInput[] = [];
+  // Explore is for other people's trips
+  if (viewer.id) and.push({ ownerId: { not: viewer.id } }, { members: { none: { userId: viewer.id } } });
   if (f.type) where.types = { has: f.type }; // a trip matches any of its types
-  if (f.country) where.countryCodes = { has: f.country };
-  if (f.length) {
-    const { min, max } = LENGTHS[f.length];
-    where.durationDays = max === null ? { gte: min } : { gte: min, lte: max };
+  const countries = countryScope(f);
+  if (countries) where.countryCodes = { hasSome: countries };
+  if (f.minDays || f.maxDays) {
+    where.durationDays = { ...(f.minDays && { gte: f.minDays }), ...(f.maxDays && { lte: f.maxDays }) };
   }
-  if (f.budget) {
-    const { min, max } = BUDGETS[f.budget];
-    where.costPerPersonEur = { ...(min !== null && { gte: min }), ...(max !== null && { lt: max }) };
+  if (f.minBudget || f.maxBudget) {
+    // Trips store an approximate cost per person in euros, for exactly this
+    const cur = f.currency ?? viewer.homeCurrency;
+    const rates = cur === "EUR" ? APPROX_RATES : (await getRates()).table;
+    const eur = (n: number | null) => (n ? (convertAmount(n, cur, "EUR", rates) ?? n) : null);
+    const min = eur(f.minBudget);
+    const max = eur(f.maxBudget);
+    where.costPerPersonEur = { ...(min !== null && { gte: min }), ...(max !== null && { lte: max }) };
   }
+  if (and.length) where.AND = and;
   return where;
 }
 
-export async function listPublicTrips(filters: ExploreFilters): Promise<{ trips: ExploreCard[]; total: number }> {
-  const where = exploreWhere(filters);
+export async function listPublicTrips(
+  filters: ExploreFilters,
+  viewer: ExploreViewer = { id: null, homeCurrency: "EUR" },
+): Promise<{ trips: ExploreCard[]; total: number }> {
+  const where = await exploreWhere(filters, viewer);
   const [rows, total] = await Promise.all([
     db.trip.findMany({
       where,
@@ -286,10 +325,13 @@ export async function listPublicTrips(filters: ExploreFilters): Promise<{ trips:
   };
 }
 
-/** Countries that appear in public trips, for the Explore filter. */
-export async function listExploreCountries(): Promise<string[]> {
+/** Countries that appear in other people's public trips, for the Explore filter. */
+export async function listExploreCountries(viewerId: string | null = null): Promise<string[]> {
   // Fine at this scale; switch to SELECT DISTINCT unnest(...) when there are many trips.
-  const rows = await db.trip.findMany({ where: { visibility: "PUBLIC" }, select: { countryCodes: true } });
+  const rows = await db.trip.findMany({
+    where: { visibility: "PUBLIC", ...(viewerId && { ownerId: { not: viewerId } }) },
+    select: { countryCodes: true },
+  });
   return [...new Set(rows.flatMap((r) => r.countryCodes))].sort();
 }
 

@@ -1,17 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { buildChecklist, countStatuses, nextStatusOnTap, urgencyFor, urgencyLabel } from "./checklist";
+import {
+  BOOKING_ORDER,
+  bookingGroupOf,
+  buildChecklist as build,
+  countStatuses,
+  nextPaymentOnTap,
+  nextStatusOnTap,
+  PAYMENT_ORDER,
+  paymentGroupOf,
+  urgencyFor,
+  urgencyLabel,
+} from "./checklist";
+import type { ItemStatus } from "./status";
 
 const stops = [
   { id: "bkk", name: "Bangkok", arriveOn: "2027-02-01" },
   { id: "cnx", name: "Chiang Mai", arriveOn: "2027-02-05" },
 ];
 
-const item = (id: string, status: "BOOKED" | "PAY_ON_ARRIVAL" | "TO_BOOK" | "NOT_NEEDED", stopId: string | null, startAt: string | null = null) => ({
+const item = (id: string, status: ItemStatus | null, stopId: string | null, startAt: string | null = null) => ({
   id,
   status,
   stopId,
   startAt,
 });
+
+const buildChecklist = <T extends { id: string; stopId: string | null; startAt: string | null; status: ItemStatus | null }>(
+  items: T[],
+  s: typeof stops,
+  today: string,
+) => build(items, s, today, BOOKING_ORDER, bookingGroupOf);
 
 describe("urgencyFor", () => {
   it("buckets by days until the item", () => {
@@ -34,25 +52,67 @@ describe("urgencyLabel", () => {
     expect(urgencyLabel("upcoming", 30)).toBe("Coming up · in 4 weeks");
     expect(urgencyLabel("later", 100)).toBeNull();
     expect(urgencyLabel("undated", null)).toBeNull();
+    expect(urgencyLabel("soon", 3, "Buy")).toBe("Buy now · in 3 days");
   });
 });
 
 describe("nextStatusOnTap", () => {
   it("books to-book items and un-books everything else", () => {
-    expect(nextStatusOnTap("TO_BOOK")).toBe("BOOKED");
-    expect(nextStatusOnTap("BOOKED")).toBe("TO_BOOK");
-    expect(nextStatusOnTap("PAY_ON_ARRIVAL")).toBe("TO_BOOK");
-    expect(nextStatusOnTap("NOT_NEEDED")).toBe("TO_BOOK");
+    expect(nextStatusOnTap("TO_BOOK", false)).toBe("BOOKED");
+    expect(nextStatusOnTap("BOOKED", false)).toBe("TO_BOOK");
+    expect(nextStatusOnTap("NOT_NEEDED", false)).toBe("TO_BOOK");
+  });
+
+  it("buys gear to buy, and puts everything else back to buy", () => {
+    expect(nextStatusOnTap("TO_BUY", true)).toBe("BOUGHT");
+    expect(nextStatusOnTap("HAVE", true)).toBe("TO_BUY");
+    expect(nextStatusOnTap(null, true)).toBe("TO_BUY");
+  });
+});
+
+describe("nextPaymentOnTap", () => {
+  it("marks unpaid things paid, and paid things back to pay", () => {
+    expect(nextPaymentOnTap("TO_PAY")).toBe("PAID");
+    expect(nextPaymentOnTap("PAY_ON_ARRIVAL")).toBe("PAID");
+    expect(nextPaymentOnTap(null)).toBe("PAID");
+    expect(nextPaymentOnTap("PAID")).toBe("TO_PAY");
   });
 });
 
 describe("countStatuses", () => {
-  it("counts each status", () => {
-    expect(countStatuses([item("a", "BOOKED", null), item("b", "BOOKED", null), item("c", "TO_BOOK", null)])).toEqual({
+  it("counts each status and skips items without one", () => {
+    expect(countStatuses([item("a", "BOOKED", null), item("b", "BOOKED", null), item("c", "TO_BOOK", null), item("d", null, null)])).toMatchObject({
       BOOKED: 2,
-      PAY_ON_ARRIVAL: 0,
       TO_BOOK: 1,
       NOT_NEEDED: 0,
+    });
+  });
+});
+
+describe("payment view", () => {
+  const priced = (id: string, status: ItemStatus | null, payment: "PAID" | "PAY_ON_ARRIVAL" | "TO_PAY" | null, cost: number | null) => ({
+    ...item(id, status, null),
+    payment,
+    cost,
+  });
+
+  it("groups by payment, counting bought gear as paid and leaving out free and no-status items", () => {
+    const items = [
+      priced("hostel", "BOOKED", "PAY_ON_ARRIVAL", 60),
+      priced("flight", "BOOKED", "PAID", 640),
+      priced("tour", "TO_BOOK", null, 45),
+      priced("jacket", "BOUGHT", null, 90),
+      priced("poles", "TO_BUY", null, 40),
+      priced("temple", "NOT_NEEDED", null, null),
+      priced("park", "TO_BOOK", null, 0),
+      priced("visa", null, null, 35),
+    ];
+    const { groups } = build(items, stops, "2027-01-01", PAYMENT_ORDER, paymentGroupOf);
+    expect(Object.fromEntries(PAYMENT_ORDER.map((k) => [k, groups[k].map((e) => e.item.id)]))).toEqual({
+      TO_PAY: ["poles"],
+      PAY_ON_ARRIVAL: ["hostel"],
+      PAID: ["flight", "jacket"],
+      UNSET: ["tour"],
     });
   });
 });
@@ -71,6 +131,15 @@ describe("buildChecklist", () => {
     expect(groups.TO_BOOK.map((e) => e.stopName)).toEqual(["Bangkok", "Chiang Mai", null]);
     expect(groups.BOOKED.map((e) => e.item.id)).toEqual(["hotel"]);
     expect(groups.BOOKED[0].urgency).toBeNull();
+  });
+
+  it("puts gear in its own sections and flags gear still to buy", () => {
+    const items = [item("poles", "TO_BUY", "bkk"), item("jacket", "HAVE", null), item("visa", null, null)];
+    const { groups, dueSoon } = buildChecklist(items, stops, "2027-01-28");
+    expect(groups.TO_BUY.map((e) => [e.item.id, e.urgency])).toEqual([["poles", "soon"]]);
+    expect(groups.HAVE.map((e) => e.item.id)).toEqual(["jacket"]);
+    expect(groups.NONE.map((e) => e.item.id)).toEqual(["visa"]);
+    expect(dueSoon).toBe(1);
   });
 
   it("flags to-book items that are soon or overdue", () => {

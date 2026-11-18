@@ -46,3 +46,16 @@ export const optionalMoney = zod
   .transform((v) => v.replace(/[\s,]/g, ""))
   .refine((v) => v === "" || /^\d{1,12}(\.\d{1,2})?$/.test(v), "Enter an amount like 45 or 45.50")
   .transform((v) => (v === "" ? null : Number(v)));
+
+/** Path of an image uploaded to Tripster (see src/app/img/[id]/route.ts) */
+export const UPLOAD_PATH = /^\/img\/[a-z0-9]{20,40}$/;
+
+/** An image: an https:// link, or a photo uploaded here. "" = none. */
+export const optionalImageUrl = zod
+  .union([
+    zod.literal(""),
+    zod.string().regex(UPLOAD_PATH, "Upload the photo again"),
+    zod.url({ protocol: /^https$/, message: "Use an https:// image link" }).max(1000),
+  ])
+  .nullish()
+  .transform((v) => v || null);

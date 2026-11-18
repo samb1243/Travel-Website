@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { MAX_ITEMS_PER_TRIP, MAX_STOPS_PER_TRIP } from "@/lib/limits";
-import { ITEM_STATUSES, type ItemStatus } from "@/lib/status";
+import { isPurchaseCategory, ITEM_STATUSES, PAYMENT_STATUSES, statusesFor, type ItemStatus, type PaymentStatus } from "@/lib/status";
 import { fieldErrors } from "@/lib/validation/common";
 import { itemSchema, type ItemFormInput } from "@/lib/validation/item";
 import { stopOrderSchema, stopSchema, type StopInput } from "@/lib/validation/stop";
@@ -148,16 +148,32 @@ export async function saveItem(
 }
 
 const statusSchema = z.enum(ITEM_STATUSES);
+const paymentSchema = z.enum(PAYMENT_STATUSES).nullable();
 
 /** One-tap status change from the checklist. Status doesn't affect costs, so no summary refresh. */
 export async function setItemStatus(itemId: string, status: ItemStatus): Promise<ActionResult> {
   const { tripId } = await requireItemEditor(id.parse(itemId));
   const parsed = statusSchema.safeParse(status);
-  if (!parsed.success) return { ok: false, message: "Unknown booking status." };
+  if (!parsed.success) return { ok: false, message: "Unknown status." };
+  const { category } = await db.item.findUniqueOrThrow({ where: { id: itemId }, select: { category: true } });
+  if (!statusesFor(category).includes(parsed.data)) return { ok: false, message: "That status doesn't fit this kind of item." };
 
   await db.item.update({ where: { id: itemId }, data: { status: parsed.data } });
   revalidatePath(`/trips/${tripId}`, "layout");
   revalidatePath("/dashboard");
+  return { ok: true, id: itemId };
+}
+
+/** One-tap payment change from the checklist (bookings only; null clears it). */
+export async function setItemPayment(itemId: string, payment: PaymentStatus | null): Promise<ActionResult> {
+  const { tripId } = await requireItemEditor(id.parse(itemId));
+  const parsed = paymentSchema.safeParse(payment);
+  if (!parsed.success) return { ok: false, message: "Unknown payment status." };
+  const { category } = await db.item.findUniqueOrThrow({ where: { id: itemId }, select: { category: true } });
+  if (isPurchaseCategory(category)) return { ok: false, message: "Gear and other items don't have a payment status." };
+
+  await db.item.update({ where: { id: itemId }, data: { payment: parsed.data } });
+  revalidatePath(`/trips/${tripId}`, "layout");
   return { ok: true, id: itemId };
 }
 

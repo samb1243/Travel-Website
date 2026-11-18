@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { fieldErrors, profileSchema } from "@/lib/validation/auth";
 import { requireUser } from "@/server/session";
+import { changedColors, cleanCustomColors } from "@/lib/colors";
+import { Prisma } from "@/generated/prisma/client";
 
 export type ProfileState = {
   ok: boolean;
@@ -29,4 +31,16 @@ export async function updateProfile(_prev: ProfileState, formData: FormData): Pr
 
   revalidatePath("/", "layout"); // header avatar and name
   return { ok: true, message: "Profile saved" };
+}
+
+/** Saves someone's own colour coding (only colours that differ from the defaults). Null resets. */
+export async function saveColors(colors: unknown): Promise<{ ok: boolean; message?: string }> {
+  const user = await requireUser();
+  const changed = colors === null ? {} : changedColors(cleanCustomColors(colors));
+  await db.user.update({
+    where: { id: user.id },
+    data: { colors: Object.keys(changed).length ? changed : Prisma.DbNull },
+  });
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

@@ -15,6 +15,9 @@ import { formatDate, formatItemWhen } from "@/lib/format";
 import { CATEGORY_META, LINK_KIND_META, linkButtonLabel } from "@/lib/item-categories";
 import { buildItinerary, MAX_DAYS, type DayEntry, type ItineraryDay, type Night } from "@/lib/itinerary";
 import { STATUS_META } from "@/lib/status";
+import { mapLinksFor } from "@/lib/map-links";
+import { AddConfirmationChip, MapLinks, StatusBadges } from "@/components/builder/status-badges";
+import { ItemPhoto } from "@/components/builder/item-photo";
 import { cn } from "@/lib/utils";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
 
@@ -119,12 +122,12 @@ export function ItineraryView({
                         className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2"
                         interactiveClassName="hover:bg-accent"
                       >
-                        {readOnly ? null : (
+                        {readOnly || !item.status ? null : (
                           <span className={cn("size-2 shrink-0 rounded-full", STATUS_META[item.status].dot)} aria-hidden />
                         )}
                         <CategoryTile category={item.category} size="sm" />
                         <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                        {readOnly ? null : <span className="sr-only">{STATUS_META[item.status].label}</span>}
+                        {readOnly || !item.status ? null : <span className="sr-only">{STATUS_META[item.status].label}</span>}
                       </Tappable>
                     </li>
                   );
@@ -276,7 +279,7 @@ function Entry({
 }) {
   const { item, kind, time } = entry;
   const meta = CATEGORY_META[item.category];
-  const status = STATUS_META[item.status];
+  const status = item.status ? STATUS_META[item.status] : null;
   const kindLabel = kind === "start" ? meta.labels.start : kind === "end" ? meta.labels.end : null;
   const route = item.fromPlace && item.toPlace ? `${item.fromPlace} → ${item.toPlace}` : null;
   // A single entry that spans days (rail pass) shows its full range.
@@ -284,7 +287,8 @@ function Entry({
     ? formatItemWhen(item.startAt, item.endAt, item.allDay)
     : null;
   const details = [kindLabel, route && route !== item.title ? route : null, range, item.provider].filter(Boolean).join(" · ");
-  const showExtras = kind !== "end" && (item.links.length > 0 || item.confirmationCode);
+  const showExtras =
+    kind !== "end" && (item.links.length > 0 || item.confirmationCode || item.needsOwnConfirmation || item.imageUrl || mapLinksFor(item).length > 0);
 
   return (
     <li className="flex gap-3">
@@ -294,7 +298,7 @@ function Entry({
       <div
         className={cn(
           "min-w-0 flex-1 rounded-xl border bg-background",
-          showStatus && cn("border-l-4", status.border),
+          showStatus && status && cn("border-l-4", status.border),
           kind === "end" && "bg-muted/40",
         )}
       >
@@ -311,16 +315,19 @@ function Entry({
               {kind !== "end" ? <ItemPrice item={item} tripCurrency={currency} className="text-sm text-muted-foreground" /> : null}
             </span>
             {details ? <span className="block text-sm text-muted-foreground">{details}</span> : null}
-            {showStatus && (item.status === "TO_BOOK" || item.status === "PAY_ON_ARRIVAL") ? (
-              <span className={cn("mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium", status.badge)}>
-                <span aria-hidden>{status.emoji}</span> {status.label}
-              </span>
+            {kind !== "end" && item.address ? <span className="block text-sm text-muted-foreground">{item.address}</span> : null}
+            {kind !== "end" && item.notes ? (
+              <span className="block text-sm text-pretty whitespace-pre-line">{item.notes}</span>
             ) : null}
+            {showStatus && kind !== "end" ? <StatusBadges status={item.status} payment={item.payment} only="open" /> : null}
           </span>
         </Tappable>
         {showExtras ? (
           <div className="flex flex-wrap gap-2 px-2.5 pb-2.5">
+            {item.imageUrl ? <ItemPhoto src={item.imageUrl} alt={item.title} className="mb-0.5" /> : null}
+            {item.needsOwnConfirmation && onEdit ? <AddConfirmationChip onClick={onEdit} className="h-10 px-3.5 text-sm" /> : null}
             {item.confirmationCode ? <CopyCode code={item.confirmationCode} /> : null}
+            <MapLinks item={item} className="contents" />
             {item.links.map((l) => {
               const LinkIcon = LINK_KIND_META[l.kind].icon;
               return (

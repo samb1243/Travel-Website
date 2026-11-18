@@ -1,16 +1,16 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Tripster mark: a trail signpost, two yellow boards pointing opposite ways
- * on a pine tile. Same artwork as src/app/icon.svg (the favicon).
+ * Tripster mark: a trail signpost, centred on a pine tile, with two yellow
+ * boards fixed to the post pointing opposite ways. Same artwork as src/app/icon.svg (the favicon).
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" className={cn("size-8", className)} aria-hidden>
+    <svg viewBox="0 0 32 32" className={cn("size-8 rounded-lg dark:ring-1 dark:ring-white/20", className)} aria-hidden>
       <rect width="32" height="32" rx="8" fill="#1c3a32" />
-      <rect x="10.4" y="5.5" width="2.6" height="22" rx="0.6" fill="#cfdad5" />
-      <path d="M5.5 8.5 H21.5 L25.5 12 L21.5 15.5 H5.5 Z" fill="#f4c430" />
-      <path d="M10 18 H26.5 V25 H10 L6 21.5 Z" fill="#f4c430" />
+      <rect x="14.6" y="4.5" width="2.8" height="23.5" rx="0.7" fill="#cfdad5" />
+      <path d="M14.6 8 H22.5 L26.5 11.5 L22.5 15 H14.6 Z" fill="#f4c430" />
+      <path d="M17.4 17.5 H9.5 L5.5 21 L9.5 24.5 H17.4 Z" fill="#f4c430" />
     </svg>
   );
 }

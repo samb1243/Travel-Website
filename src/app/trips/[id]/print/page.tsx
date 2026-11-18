@@ -9,7 +9,7 @@ import { formatDate, formatDateRange, formatItemWhen, plural } from "@/lib/forma
 import { CATEGORY_META } from "@/lib/item-categories";
 import { buildItinerary, type DayEntry } from "@/lib/itinerary";
 import { formatMoney, itemPriceParts } from "@/lib/money";
-import { STATUS_META } from "@/lib/status";
+import { isOpen, PAYMENT_META, STATUS_META } from "@/lib/status";
 import { formatTripTypes } from "@/lib/trip-types";
 import { loadEditorTrip } from "@/server/trip-page";
 import { getTripBuilderData, type BuilderItem } from "@/server/trips";
@@ -51,7 +51,7 @@ async function PrintableTrip({ params, searchParams }: Pick<PageProps<"/trips/[i
     travellers: trip.travellers,
     durationDays: trip.durationDays,
   });
-  const toBook = items.filter((i) => i.status === "TO_BOOK");
+  const toBook = items.filter((i) => isOpen(i.status));
   const dates = formatDateRange(trip.startDate, trip.endDate);
 
   return (
@@ -161,7 +161,7 @@ async function PrintableTrip({ params, searchParams }: Pick<PageProps<"/trips/[i
 
         {toBook.length ? (
           <section className="break-inside-avoid space-y-2">
-            <h2 className="font-heading text-xl font-extrabold">Still to book</h2>
+            <h2 className="font-heading text-xl font-extrabold">Still to book or buy</h2>
             <ul className="space-y-1 text-sm">
               {toBook.map((i) => (
                 <li key={i.id} className="flex gap-2">
@@ -199,7 +199,7 @@ function PrintEntry({ entry, currency, showPrivate }: { entry: DayEntry<BuilderI
   const meta = CATEGORY_META[item.category];
   const kindLabel = kind === "start" ? meta.labels.start : kind === "end" ? meta.labels.end : meta.label;
   const route = item.fromPlace && item.toPlace ? `${item.fromPlace} → ${item.toPlace}` : null;
-  const details = [route && route !== item.title ? route : null, item.provider].filter(Boolean).join(" · ");
+  const details = [route && route !== item.title ? route : null, item.provider, item.address].filter(Boolean).join(" · ");
 
   return (
     <li className="grid grid-cols-[3.25rem_1fr_auto] gap-x-3 text-sm">
@@ -230,7 +230,13 @@ function PrintEntry({ entry, currency, showPrivate }: { entry: DayEntry<BuilderI
       </span>
       <span className="text-right">
         {kind !== "end" ? <PrintPrice item={item} currency={currency} /> : null}
-        {kind !== "end" ? <span className="block text-xs text-[#4a5a55]">{STATUS_META[item.status].label}</span> : null}
+        {kind !== "end" ? (
+          <span className="block text-xs text-[#4a5a55]">
+            {[item.status ? STATUS_META[item.status].label : null, item.payment ? PAYMENT_META[item.payment].label : null]
+              .filter(Boolean)
+              .join(", ")}
+          </span>
+        ) : null}
       </span>
     </li>
   );

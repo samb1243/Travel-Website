@@ -7,7 +7,7 @@
 //   Item.confirmationCode, Item.privateNotes, and links of kind CONFIRMATION.
 
 import { addDays, daysBetween } from "@/lib/dates";
-import type { ItemCategory, ItemStatus, LinkKind, TripType, Visibility } from "@/generated/prisma/enums";
+import type { ItemCategory, ItemStatus, LinkKind, PaymentStatus, TripType, Visibility } from "@/generated/prisma/enums";
 
 export const SHAREABLE: readonly Visibility[] = ["PUBLIC", "UNLISTED"];
 
@@ -77,7 +77,12 @@ export type CopySource = {
     toPlace: string | null;
     cost: number | null;
     currency: string | null;
-    status: ItemStatus;
+    status: ItemStatus | null;
+    payment: PaymentStatus | null;
+    address: string | null;
+    imageUrl: string | null;
+    /** The original had a confirmation number or confirmation link (never copied itself) */
+    hadConfirmation: boolean;
     notes: string | null;
     links: { kind: LinkKind; label: string | null; url: string; position: number }[];
   }[];
@@ -102,8 +107,30 @@ export function firstDateOf(source: Pick<CopySource, "startDate" | "stops" | "it
   return new Date(Math.min(...dates.map((d) => d.getTime())));
 }
 
+const isTimedTravel = (c: ItemCategory) => c === "FLIGHT" || c === "TRANSPORT";
+
+/** Midnight (UTC) of the same day: the app's "date with no time". */
+function dayOnly(d: Date | null): Date | null {
+  return d ? new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())) : null;
+}
+
 /**
- * Plans the rows for a copy. Everything starts as "To book", is private, and
+ * Statuses for the new traveller: nothing is booked, bought or paid yet.
+ * "Pay on arrival" stays, since it's how the place works; "No booking needed"
+ * stays too.
+ */
+export function copiedStatus(i: { status: ItemStatus | null; payment: PaymentStatus | null }): {
+  status: ItemStatus | null;
+  payment: PaymentStatus | null;
+} {
+  const status: ItemStatus | null =
+    i.status === "BOOKED" ? "TO_BOOK" : i.status === "BOUGHT" || i.status === "HAVE" ? "TO_BUY" : i.status;
+  const payment: PaymentStatus | null = i.payment === "PAID" ? "TO_PAY" : i.payment;
+  return { status, payment };
+}
+
+/**
+ * Plans the rows for a copy. Nothing is booked or paid yet, it is private, and
  * credits the original. Ids are generated up front so the rows can be
  * inserted with a few createMany calls in one transaction.
  */
@@ -158,11 +185,12 @@ export function planTripCopy(source: CopySource, opts: CopyOptions) {
       };
     });
 
-  type CopiedItem = Omit<CopySource["items"][number], "links"> & {
+  type CopiedItem = Omit<CopySource["items"][number], "links" | "hadConfirmation"> & {
     id: string;
     tripId: string;
     confirmationCode: null;
     privateNotes: null;
+    needsOwnConfirmation: boolean;
     createdById: string;
   };
   const items: CopiedItem[] = [];
@@ -177,17 +205,22 @@ export function planTripCopy(source: CopySource, opts: CopyOptions) {
       category: i.category,
       title: i.title,
       provider: i.provider,
-      startAt: shift(i.startAt),
-      endAt: shift(i.endAt),
-      allDay: i.allDay,
+      // Flight and bus/train times won't match on new dates: keep the day, drop
+      // the time, so the new traveller fills it in once they've booked.
+      ...(isTimedTravel(i.category)
+        ? { startAt: dayOnly(shift(i.startAt)), endAt: dayOnly(shift(i.endAt)), allDay: i.startAt !== null }
+        : { startAt: shift(i.startAt), endAt: shift(i.endAt), allDay: i.allDay }),
       fromPlace: i.fromPlace,
       toPlace: i.toPlace,
       cost: i.cost,
       currency: i.currency,
-      status: "TO_BOOK", // nothing is booked for the new traveller yet
+      address: i.address,
+      imageUrl: i.imageUrl,
+      ...copiedStatus(i),
       confirmationCode: null,
       notes: i.notes,
       privateNotes: null,
+      needsOwnConfirmation: i.hadConfirmation,
       createdById: opts.newOwnerId, // copying counts as adding them to your own trip
     });
     shareableLinks(i.links)

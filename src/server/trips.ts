@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { db } from "@/lib/db";
 import { emptyStatusCounts, type StatusCounts } from "@/lib/status";
-import type { ItemCategory, ItemStatus, LinkKind, TripType, Visibility } from "@/generated/prisma/enums";
+import type { ItemCategory, ItemStatus, LinkKind, PaymentStatus, TripType, Visibility } from "@/generated/prisma/enums";
 import { toDateOnly } from "@/lib/dates";
 import { editableBy } from "@/server/permissions";
 import { getRates } from "@/server/rates";
@@ -64,7 +64,7 @@ async function statusCountsFor(tripIds: string[]): Promise<Map<string, StatusCou
   });
   const map = new Map<string, StatusCounts>();
   for (const id of tripIds) map.set(id, emptyStatusCounts());
-  for (const r of rows) map.get(r.tripId)![r.status] = r._count._all;
+  for (const r of rows) if (r.status) map.get(r.tripId)![r.status] = r._count._all;
   return map;
 }
 
@@ -140,7 +140,14 @@ export type BuilderItem = {
   currency: string | null;
   /** `cost` converted into the trip's currency at today's rate (same as cost when no currency) */
   costInTripCurrency: number | null;
-  status: ItemStatus;
+  /** Null only for gear / other with no status picked */
+  status: ItemStatus | null;
+  payment: PaymentStatus | null;
+  address: string | null;
+  /** A web link or an uploaded photo (/img/<id>) */
+  imageUrl: string | null;
+  /** A copied item whose original had a confirmation: remind to add your own */
+  needsOwnConfirmation: boolean;
   confirmationCode: string | null;
   notes: string | null;
   privateNotes: string | null;
@@ -210,6 +217,12 @@ export async function getTripBuilderData(tripId: string, userId: string) {
       currency: i.currency,
       costInTripCurrency: costInTripCurrency(i.cost, i.currency, trip.currency, rates),
       status: i.status,
+      payment: i.payment,
+      address: i.address,
+      imageUrl: i.imageUrl,
+      // Only until they add a confirmation number or link of their own
+      needsOwnConfirmation:
+        i.needsOwnConfirmation && !i.confirmationCode && !i.links.some((l) => l.kind === "CONFIRMATION"),
       confirmationCode: i.confirmationCode,
       notes: i.notes,
       privateNotes: i.privateNotes,

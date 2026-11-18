@@ -1,35 +1,32 @@
-// Explore filters live in the URL (?type=HIKING&length=week&budget=mid&country=FR)
-// so filtered views can be shared and work without JavaScript. Anything
-// invalid in the URL is ignored rather than causing an error.
+// Explore filters live in the URL, so filtered views can be shared and work
+// without JavaScript:
+//   ?type=HIKING&continent=EU&country=FR,IT&minDays=5&maxDays=10&minBudget=500&maxBudget=2000&cur=GBP
+// Budgets are per person, in `cur` (the viewer's home currency by default).
+// Anything invalid in the URL is ignored rather than causing an error.
 
+import { CURRENCY_CODES } from "@/lib/currencies";
+import { CONTINENT_CODES, countriesIn, type Continent } from "@/lib/continents";
 import { TRIP_TYPES } from "@/lib/trip-types";
 import type { TripType } from "@/generated/prisma/enums";
 
 export const PAGE_SIZE = 24;
-
-export const LENGTHS = {
-  short: { label: "Up to 4 days", min: 1, max: 4 },
-  week: { label: "5–10 days", min: 5, max: 10 },
-  fortnight: { label: "11–17 days", min: 11, max: 17 },
-  long: { label: "18+ days", min: 18, max: null },
-} as const;
-
-/** Approximate cost per person in euros (see src/lib/fx.ts). */
-export const BUDGETS = {
-  low: { label: "Under €750 pp", min: null, max: 750 },
-  mid: { label: "€750–2,000 pp", min: 750, max: 2000 },
-  high: { label: "€2,000–4,000 pp", min: 2000, max: 4000 },
-  luxe: { label: "€4,000+ pp", min: 4000, max: null },
-} as const;
-
-export type LengthKey = keyof typeof LENGTHS;
-export type BudgetKey = keyof typeof BUDGETS;
+/** Most countries you can pick at once */
+export const MAX_COUNTRIES = 12;
+export const MAX_DAYS = 366;
+export const MAX_BUDGET = 1_000_000;
 
 export type ExploreFilters = {
   type: TripType | null;
-  length: LengthKey | null;
-  budget: BudgetKey | null;
-  country: string | null;
+  continent: Continent | null;
+  /** ISO codes; a trip matches if it visits any of them */
+  countries: string[];
+  minDays: number | null;
+  maxDays: number | null;
+  /** Per person, in `currency` */
+  minBudget: number | null;
+  maxBudget: number | null;
+  /** The budget's currency; null = the viewer's home currency */
+  currency: string | null;
   page: number;
 };
 
@@ -38,14 +35,38 @@ type Params = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 const pick = <K extends string>(value: string, keys: readonly K[]) => (keys.includes(value as K) ? (value as K) : null);
 
+/** A whole number from 0 to max, or null */
+function whole(value: string, max: number): number | null {
+  if (!/^\d{1,7}$/.test(value.trim())) return null;
+  const n = Number(value);
+  return n <= max ? n : null;
+}
+
 export function parseExploreFilters(params: Params): ExploreFilters {
-  const country = one(params.country).trim().toUpperCase();
+  const continent = pick(one(params.continent).toUpperCase(), CONTINENT_CODES);
+  // "FR,IT" or ?country=FR&country=IT
+  const raw = (Array.isArray(params.country) ? params.country : [params.country ?? ""]).flatMap((v) => v.split(","));
+  let countries = [...new Set(raw.map((c) => c.trim().toUpperCase()).filter((c) => /^[A-Z]{2}$/.test(c)))].slice(0, MAX_COUNTRIES);
+  // Countries outside the chosen continent don't make sense together with it
+  if (continent) countries = countries.filter((c) => countriesIn(continent).includes(c));
+
+  let minDays = whole(one(params.minDays), MAX_DAYS);
+  let maxDays = whole(one(params.maxDays), MAX_DAYS);
+  if (minDays !== null && maxDays !== null && minDays > maxDays) [minDays, maxDays] = [maxDays, minDays];
+  let minBudget = whole(one(params.minBudget), MAX_BUDGET);
+  let maxBudget = whole(one(params.maxBudget), MAX_BUDGET);
+  if (minBudget !== null && maxBudget !== null && minBudget > maxBudget) [minBudget, maxBudget] = [maxBudget, minBudget];
+
   const page = Number.parseInt(one(params.page), 10);
   return {
     type: pick(one(params.type), TRIP_TYPES),
-    length: pick(one(params.length), Object.keys(LENGTHS) as LengthKey[]),
-    budget: pick(one(params.budget), Object.keys(BUDGETS) as BudgetKey[]),
-    country: /^[A-Z]{2}$/.test(country) ? country : null,
+    continent,
+    countries,
+    minDays: minDays || null,
+    maxDays: maxDays || null,
+    minBudget: minBudget || null,
+    maxBudget: maxBudget || null,
+    currency: pick(one(params.cur).toUpperCase(), CURRENCY_CODES),
     page: Number.isFinite(page) && page >= 1 && page <= 1000 ? page : 1,
   };
 }
@@ -54,12 +75,25 @@ export function parseExploreFilters(params: Params): ExploreFilters {
 export function exploreHref(filters: Partial<ExploreFilters>): string {
   const q = new URLSearchParams();
   if (filters.type) q.set("type", filters.type);
-  if (filters.length) q.set("length", filters.length);
-  if (filters.budget) q.set("budget", filters.budget);
-  if (filters.country) q.set("country", filters.country);
+  if (filters.continent) q.set("continent", filters.continent);
+  if (filters.countries?.length) q.set("country", filters.countries.join(","));
+  if (filters.minDays) q.set("minDays", String(filters.minDays));
+  if (filters.maxDays) q.set("maxDays", String(filters.maxDays));
+  if (filters.minBudget) q.set("minBudget", String(filters.minBudget));
+  if (filters.maxBudget) q.set("maxBudget", String(filters.maxBudget));
+  // The currency only matters with a budget
+  if (filters.currency && (filters.minBudget || filters.maxBudget)) q.set("cur", filters.currency);
   if (filters.page && filters.page > 1) q.set("page", String(filters.page));
   const s = q.toString();
   return s ? `/explore?${s}` : "/explore";
 }
 
-export const hasFilters = (f: ExploreFilters) => Boolean(f.type || f.length || f.budget || f.country);
+export const hasFilters = (f: ExploreFilters) =>
+  Boolean(f.type || f.continent || f.countries.length || f.minDays || f.maxDays || f.minBudget || f.maxBudget);
+
+/** The countries a trip must visit (any of): the picked ones, else the whole continent, else no limit. */
+export function countryScope(f: Pick<ExploreFilters, "continent" | "countries">): string[] | null {
+  if (f.countries.length) return f.countries;
+  if (f.continent) return countriesIn(f.continent);
+  return null;
+}

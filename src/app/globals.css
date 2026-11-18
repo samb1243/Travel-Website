@@ -69,6 +69,46 @@
 /* "Trail signpost": glacier background, pine ink, trail-sign yellow for the route.
    Status colours (booked / pay on arrival / to book) live in src/lib/status.ts. */
 :root {
+  /* Colour coding (src/lib/colors.ts); people can override these */
+  --k-travel: #4f46e5;
+  --k-travel-fg: #fff;
+  --k-travel-ink: #4f46e5;
+  --k-stay: #b0308c;
+  --k-stay-fg: #fff;
+  --k-stay-ink: #b0308c;
+  --k-do: #d23a52;
+  --k-do-fg: #fff;
+  --k-do-ink: #d23a52;
+  --k-kit: #8a5a36;
+  --k-kit-fg: #fff;
+  --k-kit-ink: #8a5a36;
+  --k-booked: #10b981;
+  --k-booked-fg: #fff;
+  --k-booked-ink: #10b981;
+  --k-to-book: #f59e0b;
+  --k-to-book-fg: #14231f;
+  --k-to-book-ink: #f59e0b;
+  --k-not-needed: #a1a1aa;
+  --k-not-needed-fg: #14231f;
+  --k-not-needed-ink: #a1a1aa;
+  --k-bought: #10b981;
+  --k-bought-fg: #fff;
+  --k-bought-ink: #10b981;
+  --k-to-buy: #f59e0b;
+  --k-to-buy-fg: #14231f;
+  --k-to-buy-ink: #f59e0b;
+  --k-have: #64748b;
+  --k-have-fg: #fff;
+  --k-have-ink: #64748b;
+  --k-paid: #0d9488;
+  --k-paid-fg: #fff;
+  --k-paid-ink: #0d9488;
+  --k-pay-on-arrival: #0ea5e9;
+  --k-pay-on-arrival-fg: #14231f;
+  --k-pay-on-arrival-ink: #0ea5e9;
+  --k-to-pay: #ea580c;
+  --k-to-pay-fg: #fff;
+  --k-to-pay-ink: #ea580c;
   --background: #eef2f0; /* glacier */
   --foreground: #1c3a32; /* pine */
   --card: #ffffff;
@@ -108,6 +148,46 @@
 
 /* "Night trail": deep pine, the same yellow for the route. */
 .dark {
+  /* Colour coding (src/lib/colors.ts); people can override these */
+  --k-travel: #6c6ef2;
+  --k-travel-fg: #fff;
+  --k-travel-ink: #9a9cf7;
+  --k-stay: #c94ba6;
+  --k-stay-fg: #fff;
+  --k-stay-ink: #e48ccb;
+  --k-do: #e2566c;
+  --k-do-fg: #fff;
+  --k-do-ink: #f2909f;
+  --k-kit: #a87048;
+  --k-kit-fg: #fff;
+  --k-kit-ink: #d4a27c;
+  --k-booked: #10b981;
+  --k-booked-fg: #fff;
+  --k-booked-ink: #10b981;
+  --k-to-book: #f59e0b;
+  --k-to-book-fg: #14231f;
+  --k-to-book-ink: #f59e0b;
+  --k-not-needed: #71717a;
+  --k-not-needed-fg: #14231f;
+  --k-not-needed-ink: #71717a;
+  --k-bought: #10b981;
+  --k-bought-fg: #fff;
+  --k-bought-ink: #10b981;
+  --k-to-buy: #f59e0b;
+  --k-to-buy-fg: #14231f;
+  --k-to-buy-ink: #f59e0b;
+  --k-have: #94a3b8;
+  --k-have-fg: #fff;
+  --k-have-ink: #94a3b8;
+  --k-paid: #0d9488;
+  --k-paid-fg: #fff;
+  --k-paid-ink: #0d9488;
+  --k-pay-on-arrival: #0ea5e9;
+  --k-pay-on-arrival-fg: #14231f;
+  --k-pay-on-arrival-ink: #0ea5e9;
+  --k-to-pay: #ea580c;
+  --k-to-pay-fg: #fff;
+  --k-to-pay-ink: #ea580c;
   --background: #12241f;
   --foreground: #e6eeea;
   --card: #192f29;

@@ -52,11 +52,23 @@ enum ItemCategory {
   OTHER
 }
 
+/// The item's main status. Bookings (flights, stays, transport, activities,
+/// food) use BOOKED / TO_BOOK / NOT_NEEDED; gear and "other" use BOUGHT /
+/// TO_BUY / HAVE, or nothing.
 enum ItemStatus {
   BOOKED
-  PAY_ON_ARRIVAL
   TO_BOOK
   NOT_NEEDED
+  BOUGHT
+  TO_BUY
+  HAVE
+}
+
+/// Whether a booking is paid for, separate from whether it's booked
+enum PaymentStatus {
+  PAID
+  PAY_ON_ARRIVAL
+  TO_PAY
 }
 
 enum LinkKind {
@@ -75,6 +87,8 @@ model User {
   emailVerified Boolean  @default(false)
   image         String?
   homeCurrency  String   @default("EUR") @db.Char(3)
+  /// Their own colour coding (src/lib/colors.ts): { "booked": "#10b981", ... }
+  colors        Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -86,6 +100,7 @@ model User {
   calendarFeeds CalendarFeed[]
   sessions   Session[]
   accounts   Account[]
+  uploads       Upload[]
 }
 
 // --- Better Auth tables (field names must match Better Auth's schema) -------
@@ -230,9 +245,19 @@ model Item {
   fromPlace        String?
   toPlace          String?
   cost             Decimal?     @db.Decimal(14, 2)
-  /// Reserved for Phase 2 multi-currency; null means the trip currency
+  /// Currency of the cost; null means the trip currency
   currency         String?      @db.Char(3)
-  status           ItemStatus   @default(TO_BOOK)
+  /// Null for gear / other with no status picked
+  status           ItemStatus?
+  /// Optional; only used for bookings, not gear / other
+  payment          PaymentStatus?
+  /// Street address, for map links (stays, activities, food, pick-up points)
+  address          String?
+  /// A photo of it: a web link or an uploaded image (/img/<id>)
+  imageUrl         String?
+  /// Set on copies of items that had the original owner's confirmation: shows
+  /// "Add your confirmation" until this traveller adds their own
+  needsOwnConfirmation Boolean @default(false)
   /// Personal: hidden on shared views, removed when a trip is copied
   confirmationCode String?
   /// Shared with anyone who can see the trip
@@ -336,4 +361,19 @@ model ExchangeRateSnapshot {
   fetchedAt DateTime @default(now())
 
   @@index([fetchedAt])
+}
+
+/// An uploaded photo (trip cover or item photo). Re-encoded to WebP on upload,
+/// which also strips camera metadata such as GPS position. Served at /img/<id>.
+model Upload {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentType String
+  bytes       Bytes
+  width       Int
+  height      Int
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
 }

@@ -116,13 +116,19 @@ Signing in with Google using the same email as an existing password account link
 
 - **My trips** (`/dashboard`) lists your trips as photo cards, split into Upcoming and Past,
   plus trips you saved from Explore.
-- **Booking progress** ("22/34 booked") counts items that need a booking. Booked and
-  pay-on-arrival items count as booked; "No booking needed" items are left out.
+- **Statuses:** bookings (flights, stays, transport, activities, food) are **Booked**, **To
+  book** or **No booking needed**, and separately can be **Paid**, **Pay on arrival** or **To
+  pay** (optional). Gear and "other" items are **Bought**, **To buy** or **Already have**, or
+  nothing; buying them covers the payment.
+- **Progress** ("22/34 sorted") counts things that needed booking or buying: booked, bought
+  and already-owned count as sorted; "No booking needed" and gear without a status are left out.
+- **Colours:** each kind of item and each status has its own colour. Change any of them under
+  Profile → Colours; your choices apply on every trip you look at, and only you see them.
 - **Trip types:** pick all that fit, up to 4, from Backpacking, Multi-city, City break,
   Road trip, Rail journey, Hiking, Cycling, Beach & islands, Snow & skiing, Wildlife &
   safari, Family trip and Other. Explore's type filter finds a trip under any of its types.
 - **New trip** needs only a name and at least one type. Dates, budget, travellers, currency (defaults to
-  your home currency), description and cover photo link are optional.
+  your home currency), description and cover photo (upload one or paste a link) are optional.
 - **Edit / delete** from the pencil button on a trip. Deleting asks for confirmation.
 - Only the owner can open `/trips/<id>/…`. Anyone else gets "Page not found", the same as
   for a trip that doesn't exist, so private trips can't be discovered.
@@ -137,6 +143,10 @@ Signing in with Google using the same email as an existing password account link
   the type (flights and transport get From/To; leave the name empty to get "A → B").
 - **Links** become one-tap buttons on the card. "Confirmation" links, confirmation numbers
   and private notes are marked "Just for you": never shown on shared trips or copied.
+- **Address** (anything but gear): adds **Google Maps** and **Apple Maps** buttons. Buses and
+  flights with From/To get directions between them instead (or to the pick-up address).
+- **Photo**: upload one from your phone or computer, or paste a link to one on the web.
+- Cards show everything you entered: operator, address, notes, photo, links.
 - Tap a card to edit it, move it to another stop, or delete it.
 - Times are local wall-clock times where the thing happens; they never shift with your
   phone's time zone.
@@ -156,13 +166,19 @@ Signing in with Google using the same email as an existing password account link
 
 ### Checklist
 
-- Every booking grouped as To book → Pay on arrival → Booked → No booking needed, each
-  sorted by date (an item without its own date uses its stop's arrival date).
-- Tap the circle to mark something booked (tap again to undo it). The toast has an Undo button.
-- Tap the status pill to pick any of the four statuses, or tap the name to edit the item.
-- To-book items within 14 days are highlighted amber ("Book now · in 5 days"), ones within
-  45 days get a "Coming up" tag, and ones whose date has passed are highlighted red.
-- A to-book item with a "Booking" link shows it as a button, so you can book in one tap.
+- Two views, switched at the top:
+  - **Booking & buying**: To book → To buy → Booked → Bought → Already have → No booking
+    needed. Tap the circle to mark something booked (or bought); tap again to undo.
+  - **Payment**: To pay → Pay on arrival → Paid → "Payment not set" (priced, but no payment
+    status yet). Tap the circle to mark something paid. Bought gear counts as paid.
+- Each section is sorted by date (an item without its own date uses its stop's arrival date).
+  The toast after a change has an Undo button.
+- Tap a status pill to pick another status or payment. Tap anywhere else on a card to edit it.
+- Things still to book or buy within 14 days are highlighted ("Book now · in 5 days"), ones
+  within 45 days get a "Coming up" tag, and ones whose date has passed are highlighted red.
+- An item still to book with a "Booking" link shows it as a button, so you can book in one tap.
+- On a copied trip, items whose original had a confirmation show **Add your confirmation**
+  until you add your own confirmation number or link.
 
 ### Map
 
@@ -193,8 +209,9 @@ Signing in with Google using the same email as an existing password account link
   plus what's left (or how much you're over).
 - Per person, per day, and per person per day. Costs are totals for the whole group, so
   "per person" divides by the trip's number of travellers.
-- "How much is sorted": spend split by booking status, with a warning for money tied up in
-  things not booked yet (their prices may change).
+- "How much is paid": spend split into Paid, Pay on arrival, Still to pay and Payment not set
+  (bought gear counts as paid), with a warning for money tied up in things not booked or
+  bought yet (their prices may change).
 - By category and by stop (route order, plus "Whole trip"). Per-night figures use only the
   stop's stays, so a flight filed under a stop doesn't inflate them.
 - The 5 biggest costs; tap one to edit it. Items without a price are counted and mentioned,
@@ -220,16 +237,23 @@ results cached for a day, and 30 searches per user per minute. Set `NOMINATIM_US
 - **Never shared or copied:** confirmation numbers, private notes ("Just for you") and
   "Confirmation" links. Shared notes, costs, booking/map/info links and stop notes *are*
   visible to anyone who can see the trip.
-- **Explore** (`/explore`) lists public trips, newest first, with filters for type, length,
-  budget per person and country. Filters live in the URL, so a filtered view can be shared.
+- **Explore** (`/explore`) lists other people's public trips, newest first (your own trips,
+  and ones you plan together, are left out). Filter by type, continent, then one or more
+  countries, minimum and maximum days, and minimum and maximum budget per person in your home
+  currency (or any other). Filters live in the URL, so a filtered view can be shared.
   Budgets are compared in euros, converted when the trip was last changed, only for
   filtering; trips always show their own currency.
 - **Save** keeps someone's trip under "Saved from Explore" on My trips. If its owner makes it
   private, it disappears from your list.
 - **Copy this trip** (log in first) makes your own private copy: every stop, booking idea,
-  cost and link, with every status reset to **To book**, personal details left behind, and
-  "Based on X's trip" credited. Pick a new start date and every date moves to match. On
-  your own trip the button says **Duplicate**.
+  cost, address, photo and link, with personal details left behind and "Based on X's trip"
+  credited. Pick a new start date and every date moves to match. On your own trip the button
+  says **Duplicate**. For the new traveller:
+  - Booked becomes **To book**, bought or already-have gear becomes **To buy**, and Paid
+    becomes **To pay**. "Pay on arrival" and "No booking needed" stay (they're how the place works).
+  - Flights and buses/trains keep their day but lose their times, since the times won't match
+    on new dates; fill them in once booked.
+  - Items whose original had a confirmation show **Add your confirmation** until you add yours.
 
 ## Calendar and print
 
@@ -277,7 +301,7 @@ private trips") are enforced, and where.
 
 **Permissions: users can only edit their own trips**
 - Every server action is a public HTTP endpoint, so each one checks the caller itself before
-  touching data, whatever the UI sends (`src/server/actions/*`). There are 14, and nothing else
+  touching data, whatever the UI sends (`src/server/actions/*`). There are 24, and nothing else
   is exported from those files (anything exported from a `"use server"` file becomes callable).
 - Access checks live in one place, `src/server/permissions.ts`: `requireTripEditor`,
   `requireStopEditor` and `requireItemEditor` allow the owner and members; `requireTripOwner`
@@ -299,7 +323,16 @@ private trips") are enforced, and where.
 **Input validation**
 - Every action validates with Zod (`src/lib/validation/*`): lengths, enums, real calendar
   dates, money, coordinates, OpenStreetMap place ids, and links (`http(s)` only, so no
-  `javascript:` or `data:` links). Invalid Explore filters in the URL are ignored.
+  `javascript:` or `data:` links). Statuses must fit the kind of item (a stay can't be
+  "bought"). Photos are `https://` links or this site's own `/img/<id>`. Invalid Explore
+  filters in the URL are ignored.
+- **Uploads** (`/api/uploads`, logged in only, 20 a minute and 60 a day per person, 10 MB):
+  every file is decoded and re-encoded as WebP with [sharp](https://sharp.pixelplumbing.com),
+  so anything that isn't really an image is rejected, and camera metadata such as GPS
+  position is dropped. They're served from `/img/<id>` with `nosniff` and a sandboxing CSP.
+  Ids are random and unlisted; a photo is as private as the trip page that links to it.
+- **Custom colours** are saved only as known keys with `#rrggbb` values, so they can't inject
+  CSS; the copy kept in the browser is checked against the exact expected form before use.
 - Sign-up and Google sign-in bypass our forms, so user names and avatars are cleaned again in
   Better Auth's database hooks; Better Auth's generic "update user" endpoint is switched off.
 - Caps per account: 200 trips, 100 stops and 500 items per trip, 10 links per item. Creating
@@ -354,8 +387,11 @@ database name must end in `_test` or the tests refuse to start.
       move `src/server/rate-limit.ts` to Redis/Upstash.
 - [ ] Consider a full Content-Security-Policy with per-request nonces (generated in
       `src/proxy.ts`) to also restrict scripts; the current headers don't cover scripts.
-- [ ] Cover photos and avatars are images from addresses users paste, so viewers' browsers
-      load them from those sites. Consider re-hosting uploads (Phase 2) if that matters.
+- [ ] Uploaded photos are stored in the database (the `Upload` table), which is simplest to run
+      but grows the database. With many users, move them to object storage (e.g. Vercel Blob,
+      S3, Cloudflare R2) behind the same `/img/<id>` route (`src/server/uploads.ts`).
+- [ ] Pasted photo and avatar links load from other sites in viewers' browsers. Consider
+      re-hosting them too if that matters.
 - [ ] Check the name "Tripster" isn't taken where you launch; other travel businesses use it.
 
 ## Phase 2 (planned, not built)

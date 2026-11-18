@@ -4,6 +4,7 @@ import Link from "next/link";
 import { startTransition, useActionState, useState, type FormEvent } from "react";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { Field, FormError, SubmitButton } from "@/components/auth/form-bits";
+import { ImagePicker } from "@/components/image-picker";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -46,6 +47,7 @@ export function TripForm({
     );
   const full = types.length >= MAX_TRIP_TYPES;
   const [currency, setCurrency] = useState(defaults.currency);
+  const [cover, setCover] = useState(defaults.coverImageUrl);
   const errors = state.errors ?? {};
   // Open "More details" up front when editing, or when one of its fields has an error.
   const detailErrors = ["currency", "budget", "travellers", "description", "coverImageUrl"].some((k) => errors[k]);
@@ -185,17 +187,10 @@ export function TripForm({
             />
             {errors.description ? <p className="text-sm text-destructive">{errors.description}</p> : null}
           </div>
-          <Field
-            id="coverImageUrl"
-            name="coverImageUrl"
-            type="url"
-            inputMode="url"
-            label="Cover photo link (optional)"
-            placeholder="https://…"
-            defaultValue={defaults.coverImageUrl}
-            hint="Paste an https:// link to a photo. Without one, the trip gets a colour gradient."
-            error={errors.coverImageUrl}
-          />
+          <div className="space-y-1.5">
+            <ImagePicker name="coverImageUrl" value={cover} onChange={setCover} label="Cover photo (optional)" error={errors.coverImageUrl} />
+            <p className="text-xs text-muted-foreground">Upload one or paste a link. Without one, the trip gets a colour gradient.</p>
+          </div>
         </div>
       </div>
 

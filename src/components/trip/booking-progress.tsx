@@ -1,7 +1,7 @@
 import { bookingProgress, STATUS_META, type StatusCounts } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
-/** Segmented bar in the shared status colours plus "7/10 booked". */
+/** Segmented bar in the status colours plus "7/10 sorted" (booked or bought). */
 export function BookingProgress({
   counts,
   className,
@@ -19,31 +19,35 @@ export function BookingProgress({
 
   const segments = [
     { status: "BOOKED" as const, n: counts.BOOKED },
-    { status: "PAY_ON_ARRIVAL" as const, n: counts.PAY_ON_ARRIVAL },
+    { status: "BOUGHT" as const, n: counts.BOUGHT },
+    { status: "HAVE" as const, n: counts.HAVE },
+    { status: "TO_BUY" as const, n: counts.TO_BUY },
     { status: "TO_BOOK" as const, n: counts.TO_BOOK },
   ];
+  const described = segments
+    .filter((s) => s.n > 0)
+    .map((s) => `${s.n} ${STATUS_META[s.status].label.toLowerCase()}`)
+    .join(", ");
 
   return (
     <div className={cn("space-y-1.5", className)}>
       <div className="flex items-center justify-between gap-2 text-sm">
         <span className="font-medium">
-          {booked}/{total} booked
+          {booked}/{total} sorted
         </span>
         {toBook > 0 ? (
-          <span className="text-amber-700 dark:text-amber-300">{toBook} to book</span>
+          <span className="font-medium">{toBook} to book or buy</span>
         ) : (
-          <span className="text-emerald-700 dark:text-emerald-300">All booked</span>
+          <span className="font-medium">All sorted</span>
         )}
       </div>
       <div
         className={cn("flex w-full gap-0.5 overflow-hidden rounded-full bg-muted", size === "lg" ? "h-3" : "h-2")}
         role="img"
-        aria-label={`${counts.BOOKED} booked, ${counts.PAY_ON_ARRIVAL} pay on arrival, ${counts.TO_BOOK} still to book`}
+        aria-label={described}
       >
         {segments.map(({ status, n }) =>
-          n > 0 ? (
-            <div key={status} className={STATUS_META[status].dot} style={{ width: `${(n / total) * 100}%` }} />
-          ) : null,
+          n > 0 ? <div key={status} className={STATUS_META[status].dot} style={{ width: `${(n / total) * 100}%` }} /> : null,
         )}
       </div>
     </div>

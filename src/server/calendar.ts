@@ -30,6 +30,8 @@ export async function buildTripIcs(tripId: string, userId: string, origin: strin
     fromPlace: i.fromPlace,
     toPlace: i.toPlace,
     status: i.status,
+    payment: i.payment,
+    address: i.address,
     confirmationCode: i.confirmationCode,
     notes: i.notes, // shared notes only; privateNotes are deliberately left out
     links: i.links,

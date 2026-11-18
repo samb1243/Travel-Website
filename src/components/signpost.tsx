@@ -23,7 +23,7 @@ const BOARDS: Board[] = [
  */
 export function Signpost({ className }: { className?: string }) {
   return (
-    <div className={cn("relative mx-auto w-full max-w-md pt-4 pb-16", className)} aria-hidden>
+    <div className={cn("relative mx-auto w-full max-w-lg pt-4 pb-16", className)} aria-hidden>
       {/* the pole */}
       <div className="absolute top-0 bottom-0 left-1/2 w-3 -translate-x-1/2 rounded-t-sm bg-[#1c3a32] dark:bg-[#cfdad5]" />
       <ul className="relative space-y-3">
@@ -32,7 +32,9 @@ export function Signpost({ className }: { className?: string }) {
           return (
             <li
               key={b.title}
-              className={cn("signpost-board w-[64%]", right ? "ml-[36%]" : "ml-0")}
+              // Each board is fixed to the post at its flat end, like a real
+              // fingerpost: right-pointing boards start at the post, left-pointing ones end there.
+              className={cn("signpost-board w-[calc(50%+0.375rem)]", right ? "ml-[calc(50%-0.375rem)]" : "ml-0")}
               style={
                 {
                   animationDelay: `${150 + i * 110}ms`,
@@ -45,13 +47,13 @@ export function Signpost({ className }: { className?: string }) {
               <div
                 className={cn(
                   "flex min-h-16 flex-col justify-center gap-0.5 bg-trail py-2.5 text-trail-foreground md:min-h-[4.5rem]",
-                  right ? "signpost pr-8 pl-4" : "signpost-left pr-4 pl-8 text-right",
+                  right ? "signpost pr-7 pl-4" : "signpost-left pr-4 pl-7 text-right",
                 )}
               >
-                <span className="line-clamp-3 text-[0.9375rem] leading-tight font-extrabold text-balance md:line-clamp-2 md:text-lg">
+                <span className="line-clamp-3 text-sm leading-tight font-extrabold text-balance sm:text-[0.9375rem] md:text-base lg:text-lg">
                   {b.title}
                 </span>
-                <span className="text-sm leading-tight font-semibold">{b.length}</span>
+                <span className="text-xs leading-tight font-semibold sm:text-sm">{b.length}</span>
               </div>
             </li>
           );

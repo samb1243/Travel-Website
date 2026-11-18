@@ -2,12 +2,13 @@
 // bypassing the forms: every one must be rejected and store nothing.
 
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { addStop, reorderStops, saveItem, setItemStatus } from "@/server/actions/builder";
+import { addStop, reorderStops, saveItem, setItemPayment, setItemStatus } from "@/server/actions/builder";
 import { copyTrip, setVisibility } from "@/server/actions/sharing";
 import { updateProfile } from "@/server/actions/profile";
 import { MAX_STOPS_PER_TRIP } from "@/lib/limits";
 import type { ItemFormInput } from "@/lib/validation/item";
 import type { CurrentUser } from "@/server/session";
+import { saveColors } from "@/server/actions/profile";
 import { db, makeTrip, makeUser, signInAs, tripSnapshot } from "./helpers";
 
 let me: CurrentUser;
@@ -34,7 +35,7 @@ const item = (overrides: Partial<ItemFormInput>): ItemFormInput => ({
   fromPlace: "",
   toPlace: "",
   cost: "",
-  status: "TO_BOOK",
+  status: "TO_BUY",
   confirmationCode: "",
   notes: "",
   privateNotes: "",
@@ -60,6 +61,32 @@ describe("item links", () => {
     });
   }
 
+  it("only accepts statuses that fit the kind of item", async () => {
+    expect(await saveItem(mine.trip.id, null, item({ status: "BOOKED" }))).toMatchObject({ ok: false, errors: { status: expect.any(String) } });
+    expect(await saveItem(mine.trip.id, null, item({ category: "ACTIVITY", status: "TO_BUY" }))).toMatchObject({ ok: false });
+    // Bookings need a booking status; gear and other may have none
+    expect(await saveItem(mine.trip.id, null, item({ category: "ACTIVITY", status: "" }))).toMatchObject({ ok: false });
+    expect(await saveItem(mine.trip.id, null, item({ status: "" }))).toMatchObject({ ok: true });
+  });
+
+  it("drops a payment status on gear and other, which are bought instead", async () => {
+    const r = (await saveItem(mine.trip.id, null, item({ status: "BOUGHT", payment: "TO_PAY" }))) as { ok: true; id: string };
+    expect(r.ok).toBe(true);
+    expect(await db.item.findUniqueOrThrow({ where: { id: r.id } })).toMatchObject({ status: "BOUGHT", payment: null });
+  });
+
+  it("accepts photo links and uploads, and nothing else", async () => {
+    for (const bad of ["javascript:alert(1)", "http://example.com/a.jpg", "/img/../etc/passwd", "data:image/png;base64,AAAA"]) {
+      expect(await saveItem(mine.trip.id, null, item({ imageUrl: bad }))).toMatchObject({ ok: false, errors: { imageUrl: expect.any(String) } });
+    }
+    expect(await saveItem(mine.trip.id, null, item({ imageUrl: "https://example.com/view.jpg" }))).toMatchObject({ ok: true });
+    expect(await saveItem(mine.trip.id, null, item({ imageUrl: "/img/cmabc1234567890abcdefghij" }))).toMatchObject({ ok: true });
+  });
+
+  it("limits the address length", async () => {
+    expect(await saveItem(mine.trip.id, null, item({ address: "x".repeat(301) }))).toMatchObject({ ok: false, errors: { address: expect.any(String) } });
+  });
+
   it("rejects more than 10 links", async () => {
     const links = Array.from({ length: 11 }, () => ({ kind: "INFO" as const, label: "", url: "https://example.com" }));
     expect((await saveItem(mine.trip.id, null, item({ links }))).ok).toBe(false);
@@ -69,6 +96,9 @@ describe("item links", () => {
 describe("enums, sizes and types", () => {
   it("rejects unknown statuses and visibilities", async () => {
     expect(await setItemStatus(mine.item.id, "PAID_BY_SOMEONE_ELSE" as never)).toMatchObject({ ok: false });
+    // A guesthouse can't be "bought", and it can't skip having a booking status
+    expect(await setItemStatus(mine.item.id, "BOUGHT")).toMatchObject({ ok: false });
+    expect(await setItemPayment(mine.item.id, "LATER" as never)).toMatchObject({ ok: false });
     expect(await setVisibility(mine.trip.id, "EVERYONE")).toMatchObject({ ok: false });
     const trip = await db.trip.findUniqueOrThrow({ where: { id: mine.trip.id } });
     expect(trip.visibility).toBe("PRIVATE");
@@ -122,5 +152,15 @@ describe("profile", () => {
     fd.set("homeCurrency", "BTC");
     expect(await updateProfile({ ok: false }, fd)).toMatchObject({ ok: false });
     expect((await db.user.findUniqueOrThrow({ where: { id: me.id } })).homeCurrency).toBe("EUR");
+  });
+});
+
+describe("colour coding", () => {
+  it("saves only known colours in #rrggbb form, and can reset them", async () => {
+    await saveColors({ booked: "#123456", paid: "url(javascript:alert(1))", stay: "#b0308c", nonsense: "#000000" });
+    // stay is the default colour, so there's nothing to save for it
+    expect((await db.user.findUniqueOrThrow({ where: { id: me.id } })).colors).toEqual({ booked: "#123456" });
+    await saveColors(null);
+    expect((await db.user.findUniqueOrThrow({ where: { id: me.id } })).colors).toBeNull();
   });
 });

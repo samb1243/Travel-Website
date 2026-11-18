@@ -7,7 +7,7 @@
 // That matches how the app itself shows them.
 
 import { addDays, parseDateOnly, toDateOnly } from "@/lib/dates";
-import type { ItemCategory, ItemStatus, LinkKind } from "@/generated/prisma/enums";
+import type { ItemCategory, ItemStatus, PaymentStatus, LinkKind } from "@/generated/prisma/enums";
 
 type CalendarLink = { kind: LinkKind; label: string | null; url: string };
 
@@ -22,7 +22,9 @@ export type CalendarItem = {
   allDay: boolean;
   fromPlace: string | null;
   toPlace: string | null;
-  status: ItemStatus;
+  status: ItemStatus | null;
+  payment: PaymentStatus | null;
+  address: string | null;
   confirmationCode: string | null;
   notes: string | null;
   links: CalendarLink[];
@@ -55,9 +57,17 @@ const EMOJI: Record<ItemCategory, string> = {
 
 const STATUS_TEXT: Record<ItemStatus, string> = {
   BOOKED: "Booked",
-  PAY_ON_ARRIVAL: "Pay on arrival",
   TO_BOOK: "Still to book",
   NOT_NEEDED: "No booking needed",
+  BOUGHT: "Bought",
+  TO_BUY: "Still to buy",
+  HAVE: "Already have",
+};
+
+const PAYMENT_TEXT: Record<PaymentStatus, string> = {
+  PAID: "Paid",
+  PAY_ON_ARRIVAL: "Pay on arrival",
+  TO_PAY: "Still to pay",
 };
 
 /** Escapes a TEXT value (RFC 5545 §3.3.11). */
@@ -133,13 +143,14 @@ function itemEvent(item: CalendarItem, input: CalendarInput): string[] | null {
   lines.push(`SUMMARY:${escapeText(`${EMOJI[item.category]} ${item.title}`)}`);
 
   const location =
-    item.fromPlace && item.toPlace ? `${item.fromPlace} → ${item.toPlace}` : (item.fromPlace ?? item.stopName ?? null);
+    item.address ??
+    (item.fromPlace && item.toPlace ? `${item.fromPlace} → ${item.toPlace}` : (item.fromPlace ?? item.stopName ?? null));
   if (location) lines.push(`LOCATION:${escapeText(location)}`);
 
   const description = [
     item.provider ? `With ${item.provider}` : null,
     item.confirmationCode ? `Confirmation: ${item.confirmationCode}` : null,
-    STATUS_TEXT[item.status],
+    [item.status ? STATUS_TEXT[item.status] : null, item.payment ? PAYMENT_TEXT[item.payment] : null].filter(Boolean).join(", "),
     item.notes,
     ...item.links.map((l) => `${l.label ?? linkName(l.kind)}: ${l.url}`),
     `Open in Tripster: ${input.tripUrl}`,

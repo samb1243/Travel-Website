@@ -47,7 +47,7 @@ export default function HomePage() {
             </Button>
           </div>
         </div>
-        <Signpost className="max-w-sm md:max-w-md" />
+        <Signpost className="max-w-md lg:max-w-lg" />
       </section>
 
       <section className="grid gap-x-12 gap-y-10 border-t-4 border-foreground pt-10 sm:grid-cols-2">

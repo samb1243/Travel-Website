@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button";
 import { summariseBudget, type BudgetLevel } from "@/lib/budget";
 import { plural } from "@/lib/format";
 import { CATEGORY_META } from "@/lib/item-categories";
-import { formatMoney, formatPrice } from "@/lib/money";
+import { formatMoney, formatPrice, toCents } from "@/lib/money";
 import { RATES_CREDIT } from "@/lib/rates-fetch";
-import { STATUS_META } from "@/lib/status";
+import { effectivePayment, isOpen, PAYMENT_META, STATUS_META } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
 
@@ -24,12 +24,14 @@ const LEVEL_STYLE: Record<BudgetLevel, { bar: string; text: string }> = {
   over: { bar: "bg-red-500", text: "text-red-700 dark:text-red-300" },
 };
 
-const STATUS_HINT = {
-  BOOKED: "Booked",
-  PAY_ON_ARRIVAL: "Pay there",
-  TO_BOOK: "Not booked yet",
-  NOT_NEEDED: "No booking needed",
+const PAYMENT_HINT = {
+  PAID: "Paid",
+  PAY_ON_ARRIVAL: "Pay on arrival",
+  TO_PAY: "Still to pay",
+  UNSET: "Payment not set",
 } as const;
+
+const paymentDot = (p: keyof typeof PAYMENT_HINT) => (p === "UNSET" ? "bg-muted-foreground/40" : PAYMENT_META[p].dot);
 
 const pct = (share: number) => `${Math.round(share * 100)}%`;
 
@@ -60,6 +62,8 @@ export function BudgetView({
   // Budget maths uses every price converted into the trip's currency.
   const priced = items.map((i) => ({ ...i, originalCost: i.cost, cost: i.costInTripCurrency }));
   const s = summariseBudget(priced, stops, { budget, travellers, durationDays });
+  // Prices of things not booked or bought yet may still change
+  const notBookedCents = priced.filter((i) => isOpen(i.status)).reduce((sum, i) => sum + toCents(i.cost), 0);
   const anyForeign = items.some((i) => i.currency && i.currency !== currency && i.cost);
   const level = LEVEL_STYLE[s.level];
 
@@ -159,21 +163,21 @@ export function BudgetView({
         </p>
       </section>
 
-      {/* Booked vs still to pay */}
-      {/* Booking status is the owner's own business: not shown on other people's trips */}
+      {/* Paid vs still to pay */}
+      {/* Booking and payment status are the planners' own business: not shown on other people's trips */}
       {s.total > 0 && !readOnly ? (
-        <Card title="How much is sorted" className="lg:col-span-2">
+        <Card title="How much is paid" className="lg:col-span-2">
           <div className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-muted" aria-hidden>
-            {s.byStatus.map(({ status, total }) =>
-              total > 0 ? <div key={status} className={STATUS_META[status].dot} style={{ width: pct(total / s.total) }} /> : null,
+            {s.byPayment.map(({ payment, total }) =>
+              total > 0 ? <div key={payment} className={paymentDot(payment)} style={{ width: pct(total / s.total) }} /> : null,
             )}
           </div>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-            {s.byStatus.map(({ status, total, count }) => (
-              <div key={status} className="min-w-0">
+            {s.byPayment.map(({ payment, total, count }) => (
+              <div key={payment} className="min-w-0">
                 <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span className={cn("size-2.5 shrink-0 rounded-full", STATUS_META[status].dot)} aria-hidden />
-                  {STATUS_HINT[status]}
+                  <span className={cn("size-2.5 shrink-0 rounded-full", paymentDot(payment))} aria-hidden />
+                  {PAYMENT_HINT[payment]}
                 </dt>
                 <dd className="font-medium tabular-nums">
                   {money(total)} <span className="text-xs font-normal text-muted-foreground">· {count}</span>
@@ -181,10 +185,10 @@ export function BudgetView({
               </div>
             ))}
           </dl>
-          {s.byStatus[2].total > 0 ? (
-            <p className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300">
-              <CircleAlertIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
-              {money(s.byStatus[2].total)} is for things not booked yet, so prices may change.
+          {notBookedCents > 0 ? (
+            <p className="flex items-start gap-2 text-sm">
+              <CircleAlertIcon className="mt-0.5 size-4 shrink-0 text-(--k-to-book-ink)" aria-hidden />
+              {money(notBookedCents / 100)} is for things not booked or bought yet, so prices may change.
             </p>
           ) : null}
         </Card>
@@ -265,10 +269,12 @@ export function BudgetView({
                     <CategoryTile category={item.category} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{item.title}</span>
-                      {readOnly ? null : (
+                      {readOnly || !item.status ? null : (
                         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                           <span className={cn("size-2 rounded-full", STATUS_META[item.status].dot)} aria-hidden />
-                          {STATUS_META[item.status].label}
+                          {[STATUS_META[item.status].label, effectivePayment(item) ? PAYMENT_META[effectivePayment(item)!].label : null]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </span>
                       )}
                     </span>

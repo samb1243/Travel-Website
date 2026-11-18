@@ -75,6 +75,10 @@ const source: CopySource = {
       cost: 48,
       currency: null,
       status: "BOOKED",
+      payment: "PAID",
+      address: "12 Rambuttri Rd, Bangkok",
+      imageUrl: "https://example.com/hostel.jpg",
+      hadConfirmation: true,
       notes: "Top bunks are quieter",
       links: [
         { kind: "CONFIRMATION", label: "My booking", url: "https://example.com/mine", position: 0 },
@@ -94,7 +98,32 @@ const source: CopySource = {
       toPlace: null,
       cost: 95,
       currency: null,
-      status: "PAY_ON_ARRIVAL",
+      status: "BOUGHT",
+      payment: null,
+      address: null,
+      imageUrl: null,
+      hadConfirmation: false,
+      notes: null,
+      links: [],
+    },
+    {
+      stopId: "s2",
+      position: 1,
+      category: "TRANSPORT",
+      title: "Bangkok → Chiang Mai",
+      provider: "SRT",
+      startAt: new Date("2027-02-04T18:40:00Z"),
+      endAt: new Date("2027-02-05T07:15:00Z"),
+      allDay: false,
+      fromPlace: "Bangkok",
+      toPlace: "Chiang Mai",
+      cost: 30,
+      currency: null,
+      status: "BOOKED",
+      payment: "PAY_ON_ARRIVAL",
+      address: null,
+      imageUrl: null,
+      hadConfirmation: false,
       notes: null,
       links: [],
     },
@@ -120,8 +149,12 @@ describe("planTripCopy", () => {
     });
   });
 
-  it("resets every status to To book and strips personal details", () => {
-    expect(copy.items.map((i) => i.status)).toEqual(["TO_BOOK", "TO_BOOK"]);
+  it("resets what's booked, bought and paid, and strips personal details", () => {
+    expect(copy.items.map((i) => [i.status, i.payment])).toEqual([
+      ["TO_BOOK", "TO_PAY"],
+      ["TO_BUY", null],
+      ["TO_BOOK", "PAY_ON_ARRIVAL"], // how the place works, so it stays
+    ]);
     expect(copy.items.every((i) => i.confirmationCode === null && i.privateNotes === null)).toBe(true);
     expect(copy.items.every((i) => i.createdById === "lukas")).toBe(true); // the person copying
     expect(copy.links.map((l) => [l.kind, l.url, l.position])).toEqual([["BOOKING", "https://example.com/book", 0]]);
@@ -136,6 +169,12 @@ describe("planTripCopy", () => {
     expect(copy.items[0]).toMatchObject({ stopId: bangkok.id, tripId: copy.trip.id, notes: "Top bunks are quieter", cost: 48 });
     expect(copy.items[1].stopId).toBeNull();
     expect(copy.links[0].itemId).toBe(copy.items[0].id);
+    expect(copy.items[0]).toMatchObject({ address: "12 Rambuttri Rd, Bangkok", imageUrl: "https://example.com/hostel.jpg" });
+  });
+
+  it("reminds the new traveller to add their own confirmation where the original had one", () => {
+    expect(copy.items.map((i) => i.needsOwnConfirmation)).toEqual([true, false, false]);
+    expect(copy.items[0].confirmationCode).toBeNull();
   });
 
   it("uses fresh ids everywhere", () => {
@@ -153,6 +192,17 @@ describe("planTripCopy", () => {
     expect(moved.stops[0].arriveOn).toEqual(d("2027-03-02"));
     expect(moved.items[0].startAt).toEqual(new Date("2027-03-02T14:00:00Z"));
     expect(moved.items[1].startAt).toBeNull();
+  });
+
+  it("keeps the day but drops the time of flights and buses, which won't match on new dates", () => {
+    const moved = planTripCopy(source, { newOwnerId: "lukas", slug: "x", newId, startDate: d("2027-03-01") });
+    expect(moved.items[2]).toMatchObject({
+      startAt: new Date("2027-03-05T00:00:00Z"),
+      endAt: new Date("2027-03-06T00:00:00Z"),
+      allDay: true,
+    });
+    // Stays keep their check-in time
+    expect(moved.items[0].allDay).toBe(false);
   });
 
   it("labels a duplicate of your own trip instead of crediting yourself", () => {
