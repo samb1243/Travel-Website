@@ -14,7 +14,9 @@ import { parseDateOnly } from "@/lib/dates";
 import { formatDateRange } from "@/lib/format";
 import type { SharedTrip } from "@/server/shared-trips";
 
-const TRIGGER = "h-10 gap-1.5 px-3";
+// Four equal tabs that always fit, from the narrowest phone up: no sideways
+// scrolling (a scrolling tab bar also scrolls up and down by the active tab's underline).
+const TRIGGER = "h-10 min-w-0 gap-1.5 px-1.5";
 
 /** Read-only Route | Days | Map | Budget for a shared trip. */
 export function SharedTripTabs({ data, today }: { data: SharedTrip; today: string }) {
@@ -38,7 +40,7 @@ export function SharedTripTabs({ data, today }: { data: SharedTrip; today: strin
 
   return (
     <Tabs defaultValue="route" className="gap-4">
-      <TabsList className="h-12 w-full justify-start overflow-x-auto sm:w-auto">
+      <TabsList className="grid w-full grid-cols-4 group-data-horizontal/tabs:h-12">
         <TabsTrigger value="route" className={TRIGGER}>
           <LayoutListIcon aria-hidden /> Route
         </TabsTrigger>
