@@ -5,6 +5,7 @@ import { BudgetView } from "@/components/budget/budget-view";
 import { Skeleton } from "@/components/ui/skeleton";
 import { loadEditorTrip } from "@/server/trip-page";
 import { getTripBuilderData } from "@/server/trips";
+import { getTripSplit } from "@/server/split";
 
 export const metadata: Metadata = { title: "Budget" };
 
@@ -20,6 +21,8 @@ async function Budget({ params }: { params: Promise<{ id: string }> }) {
   const { trip, user } = await loadEditorTrip(params, "/budget");
   const data = await getTripBuilderData(trip.id, user.id);
   if (!data) notFound();
+  // Splitting costs only makes sense with more than one person planning
+  const split = await getTripSplit(trip.id);
 
   return (
     <BudgetView
@@ -30,6 +33,7 @@ async function Budget({ params }: { params: Promise<{ id: string }> }) {
       durationDays={trip.durationDays}
       items={[...data.stops.flatMap((s) => s.items), ...data.tripItems]}
       stops={data.stops}
+      split={split.people.length > 1 ? { people: split.people, settlements: split.settlements, viewerId: user.id } : null}
     />
   );
 }

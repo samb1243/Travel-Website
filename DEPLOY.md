@@ -10,7 +10,7 @@ use; a business needs the Pro plan).
 | ------- | -------- | ------- |
 | [Neon](https://neon.tech) | The Postgres database (with backups) | Yes |
 | [Vercel](https://vercel.com) | Runs the app; deploys on every push to GitHub | Yes |
-| [Resend](https://resend.com) | Sends password-reset emails | Strongly recommended |
+| [Resend](https://resend.com) | Sends password-reset and reminder emails | Strongly recommended |
 | [MapTiler](https://www.maptiler.com) | Map tiles for the trip maps | Strongly recommended |
 | A domain | e.g. `tripster.example.com` (you can start on `*.vercel.app`) | Optional at first |
 | Google Cloud | "Continue with Google" | Optional |
@@ -58,6 +58,7 @@ and don't change it later: changing it signs everybody out.
    | `DATABASE_URL` | Neon pooled string |
    | `DIRECT_URL` | Neon direct string |
    | `BETTER_AUTH_SECRET` | from step 2 |
+   | `CRON_SECRET` | another random string, made the same way as step 2 |
    | `BETTER_AUTH_URL` | `https://<project>.vercel.app` for now (no trailing slash) |
    | `NOMINATIM_USER_AGENT` | `Tripster (https://<project>.vercel.app)`, or your contact email |
    | `RESEND_API_KEY`, `EMAIL_FROM` | from step 4 (add them when you have them) |
@@ -69,6 +70,9 @@ and don't change it later: changing it signs everybody out.
    guess, deploy, then correct it under **Settings → Environment Variables** and redeploy.
 5. **Deploy.** The first build creates every table in Neon.
 6. Under **Settings → Functions**, set the region to match Neon's.
+7. Reminder emails: `vercel.json` schedules `/api/cron/reminders` daily at 07:00 UTC. Vercel sends
+   `CRON_SECRET` with each call; without it the run is refused. Check it under **Settings → Cron
+   Jobs**, where **Run** triggers one by hand. Emails only go out once Resend (step 4) is set up.
 
 If a setting is missing or wrong, the site refuses to start and the **Logs** tab says which one
 ("Tripster can't start; fix these settings"). Optional services that aren't set up show as
@@ -88,7 +92,7 @@ only works on the address in `BETTER_AUTH_URL`, so previews are for looking, not
 4. `EMAIL_FROM` is the sender, on the verified domain: `Tripster <hello@your-domain>`.
 5. Add both in Vercel and redeploy.
 
-Without a domain yet, password reset emails can't be sent. Everything else works.
+Without a domain yet, password reset and reminder emails can't be sent. Everything else works.
 
 ## 5. Maps: MapTiler
 

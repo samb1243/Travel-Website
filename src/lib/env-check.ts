@@ -20,7 +20,10 @@ export function checkProductionSettings(env: Env): { errors: string[]; warnings:
   }
 
   if (!set("RESEND_API_KEY") || !set("EMAIL_FROM")) {
-    warnings.push("RESEND_API_KEY / EMAIL_FROM not set: password reset emails won't be sent.");
+    warnings.push("RESEND_API_KEY / EMAIL_FROM not set: password reset and reminder emails won't be sent.");
+  }
+  if (!set("CRON_SECRET")) {
+    warnings.push("CRON_SECRET not set: the daily reminder emails are switched off (DEPLOY.md, step 3).");
   }
   if (!set("NEXT_PUBLIC_MAPTILER_KEY")) {
     warnings.push("NEXT_PUBLIC_MAPTILER_KEY not set: maps use OpenStreetMap's own tile servers, which don't allow app traffic.");

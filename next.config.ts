@@ -42,7 +42,15 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
     return [
-      { source: "/:path*", headers: securityHeaders },
+      // Every page, except tickets and documents (below)
+      { source: "/((?!documents/).*)", headers: securityHeaders },
+      {
+        // Booking documents (PDFs open in the browser's own viewer, which a
+        // no-plugins policy can block): everything but the page policy. The
+        // route adds nosniff and no-referrer itself.
+        source: "/documents/:id",
+        headers: securityHeaders.filter((h) => h.key !== "Content-Security-Policy"),
+      },
       {
         // The offline service worker: always check for a new version, same-origin scripts only
         source: "/sw.js",

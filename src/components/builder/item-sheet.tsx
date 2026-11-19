@@ -24,6 +24,8 @@ import { CURRENCIES } from "@/lib/currencies";
 import { cn } from "@/lib/utils";
 import type { ItemCategory, ItemStatus, LinkKind } from "@/generated/prisma/enums";
 import { ImagePicker } from "@/components/image-picker";
+import { DocumentsField } from "@/components/builder/documents-field";
+import { useTripPeople } from "@/components/trip/trip-people-store";
 import { deleteItem, saveItem } from "@/server/actions/builder";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
 import type { BookingDraft } from "@/lib/booking-email";
@@ -126,6 +128,11 @@ function ItemForm({
   // The price's currency; defaults to the trip's.
   const [priceCurrency, setPriceCurrency] = useState(item?.currency ?? (draft?.currency || currency));
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? "");
+  // Splitting costs, on trips planned together: who paid, and who shares it (empty = everyone)
+  const group = useTripPeople(tripId);
+  const splitting = Boolean(group && group.people.length > 1);
+  const [paidById, setPaidById] = useState(item?.paidById ?? "");
+  const [splitWith, setSplitWith] = useState<string[]>(item?.splitWith ?? []);
   const [links, setLinks] = useState<LinkRow[]>(
     item?.links.map((l) => ({ key: l.id, kind: l.kind, label: l.label ?? "", url: l.url })) ?? [],
   );
@@ -144,6 +151,7 @@ function ItemForm({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const get = (k: string) => String(fd.get(k) ?? "");
+    const everyone = group?.people.map((p) => p.id) ?? [];
     const input = {
       stopId: stopId === WHOLE_TRIP ? null : stopId,
       category,
@@ -161,6 +169,9 @@ function ItemForm({
       payment: purchase ? ("" as const) : (payment ?? ("" as const)),
       address: category === "GEAR" ? "" : get("address"),
       imageUrl,
+      // Kept as they were when the form doesn't show them (solo trips)
+      paidById: splitting ? paidById : (item?.paidById ?? ""),
+      splitWith: splitting ? (splitWith.length === everyone.length ? [] : splitWith) : (item?.splitWith ?? []),
       confirmationCode: get("confirmationCode"),
       notes: get("notes"),
       privateNotes: get("privateNotes"),
@@ -365,6 +376,18 @@ function ItemForm({
         ) : null}
       </div>
 
+      {splitting && group && !free ? (
+        <WhoPaid
+          people={group.people}
+          viewerId={group.viewerId}
+          paidById={paidById}
+          onPaidBy={setPaidById}
+          splitWith={splitWith}
+          onSplitWith={setSplitWith}
+          error={errors.paidById ?? errors.splitWith}
+        />
+      ) : null}
+
       <Field id="provider" name="provider" label={meta.labels.provider} defaultValue={item?.provider ?? draft?.provider ?? ""} error={errors.provider} />
 
       {category === "GEAR" ? null : (
@@ -382,6 +405,8 @@ function ItemForm({
       )}
 
       <ImagePicker value={imageUrl} onChange={setImageUrl} label="Photo (optional)" error={errors.imageUrl} />
+
+      <DocumentsField itemId={item?.id ?? null} documents={item?.documents ?? []} />
 
       {/* Links */}
       <fieldset className="min-w-0 space-y-2">
@@ -540,3 +565,87 @@ function ChoiceChip({
     </button>
   );
 }
+
+/**
+ * "Who paid" and "Split between", on trips planned together. Everyone shares
+ * a cost unless some people are switched off.
+ */
+function WhoPaid({
+  people,
+  viewerId,
+  paidById,
+  onPaidBy,
+  splitWith,
+  onSplitWith,
+  error,
+}: {
+  people: { id: string; name: string }[];
+  viewerId: string;
+  paidById: string;
+  onPaidBy: (id: string) => void;
+  splitWith: string[];
+  onSplitWith: (ids: string[]) => void;
+  error?: string;
+}) {
+  const nameOf = (p: { id: string; name: string }) => (p.id === viewerId ? "You" : p.name);
+  // Empty means everyone; only people still on the trip count
+  const sharing = splitWith.filter((id) => people.some((p) => p.id === id));
+  const on = (id: string) => sharing.length === 0 || sharing.includes(id);
+  function toggle(id: string) {
+    const current = sharing.length ? sharing : people.map((p) => p.id);
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+    if (next.length === 0) return; // someone has to share it
+    onSplitWith(next.length === people.length ? [] : next);
+  }
+  return (
+    <fieldset className="min-w-0 space-y-3 rounded-2xl border bg-card p-3">
+      <legend className="px-1 text-sm font-medium">Splitting the cost</legend>
+      <div className="space-y-2">
+        <Label htmlFor="paidById">Who paid</Label>
+        <Select value={paidById || NOBODY} onValueChange={(v) => onPaidBy(v === NOBODY ? "" : v)}>
+          <SelectTrigger id="paidById" className="w-full text-base data-[size=default]:h-12 md:text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NOBODY} className="min-h-11">
+              Not paid yet / not saying
+            </SelectItem>
+            {people.map((p) => (
+              <SelectItem key={p.id} value={p.id} className="min-h-11">
+                {nameOf(p)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <p className="text-sm font-medium" id="split-with-label">
+          Split between
+        </p>
+        <div className="flex flex-wrap gap-2" role="group" aria-labelledby="split-with-label">
+          {people.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={on(p.id)}
+              onClick={() => toggle(p.id)}
+              className={cn(
+                "min-h-10 rounded-full border px-3.5 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                on(p.id) ? "border-primary bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-accent",
+              )}
+            >
+              {nameOf(p)}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {sharing.length === 0 ? "Shared equally by everyone on the trip." : `Shared equally by ${sharing.length} of ${people.length}.`} The
+          Budget tab works out who owes whom.
+        </p>
+      </div>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+    </fieldset>
+  );
+}
+
+const NOBODY = "__nobody__";

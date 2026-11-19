@@ -11,6 +11,15 @@ export type TripPeople = {
   invite: { token: string; expiresAt: string } | null;
 };
 
+/** Everyone who plans this trip: the owner and its members. */
+export async function tripPeopleIds(tripId: string): Promise<Set<string>> {
+  const trip = await db.trip.findUniqueOrThrow({
+    where: { id: tripId },
+    select: { ownerId: true, members: { select: { userId: true } } },
+  });
+  return new Set([trip.ownerId, ...trip.members.map((m) => m.userId)]);
+}
+
 /** Owner first, then members in the order they joined. Names and avatars only, never emails. */
 export async function getTripPeople(tripId: string, viewerId: string): Promise<TripPeople> {
   const trip = await db.trip.findUniqueOrThrow({

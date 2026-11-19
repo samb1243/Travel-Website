@@ -152,6 +152,11 @@ export type BuilderItem = {
   notes: string | null;
   privateNotes: string | null;
   links: BuilderLink[];
+  /** Who paid for it, and who shares it (empty = everyone); trips planned together only */
+  paidById: string | null;
+  splitWith: string[];
+  /** Tickets and documents (never the files themselves); planners only */
+  documents: { id: string; name: string; contentType: string; size: number }[];
   /** Who added it; only filled in on trips planned together, never on shared pages */
   addedBy: { name: string; isYou: boolean } | null;
 };
@@ -190,6 +195,7 @@ export async function getTripBuilderData(tripId: string, userId: string) {
         include: {
           links: { orderBy: { position: "asc" } },
           createdBy: { select: { id: true, name: true } },
+          documents: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, contentType: true, size: true } },
         },
       },
       _count: { select: { members: true } },
@@ -227,6 +233,9 @@ export async function getTripBuilderData(tripId: string, userId: string) {
       notes: i.notes,
       privateNotes: i.privateNotes,
       links: i.links.map((l) => ({ id: l.id, kind: l.kind, label: l.label, url: l.url })),
+      paidById: i.paidById,
+      splitWith: i.splitWith,
+      documents: i.documents,
       // Only worth saying who added what when more than one person is planning
       addedBy:
         groupTrip && i.createdBy ? { name: i.createdBy.name, isYou: i.createdBy.id === userId } : null,

@@ -6,6 +6,7 @@ import { ExportDialog } from "@/components/trip/export-dialog";
 import { PeopleDialog } from "@/components/trip/people-dialog";
 import { ShareDialog } from "@/components/trip/share-dialog";
 import { TripTabs } from "@/components/trip/trip-tabs";
+import { ProvideTripPeople } from "@/components/trip/trip-people-store";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateRange, plural } from "@/lib/format";
@@ -83,6 +84,8 @@ async function TripHeader({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
       <TripTabs basePath={`/trips/${trip.id}`} />
+      {/* For "Who paid" in the booking form, which loads separately */}
+      <ProvideTripPeople tripId={trip.id} viewerId={user.id} people={people.people.map(({ id, name }) => ({ id, name }))} />
     </>
   );
 }

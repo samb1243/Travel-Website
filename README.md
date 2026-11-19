@@ -61,7 +61,7 @@ run when `NODE_ENV=production`, because the demo password is published here.
 | Trip                                       | Owner                | Visibility | Shows off                                     |
 | ------------------------------------------ | -------------------- | ---------- | --------------------------------------------- |
 | Three weeks in Thailand, Laos & Vietnam    | maya@example.com     | public     | overland, visas, statuses, baht & đồng prices |
-| Two weeks by train: Amsterdam to Budapest  | lukas@example.com    | public     | rail pass, 2 travellers, 5 countries          |
+| Two weeks by train: Amsterdam to Budapest  | lukas@example.com    | public     | planned with Sophie; costs split between them |
 | Tour du Mont Blanc: 8 stages, 3 countries  | sophie@example.com   | public     | hut-to-hut hiking stages, gear, cash-only huts|
 | Japan in cherry blossom season (draft)     | maya@example.com     | **private**| must never appear in Explore or share links   |
 | Ten days in Bangkok and Chiang Mai         | aiko@example.com     | public     | overlaps with the next two, for Ideas         |
@@ -173,6 +173,24 @@ Signing in with Google using the same email as an existing password account link
   and its reference. **Check & add** opens the normal item form, filled in, to check and
   change before saving; nothing is saved until you do. Dates and times are the local times
   in the email, and anything that isn't a valid date, time or known currency is left blank.
+
+### Tickets & documents
+
+Each booking can hold its boarding passes, e-tickets, visas and confirmations.
+
+- In the booking's form: **Add a ticket or document** (a PDF or a photo, up to 4 MB; up to 10
+  per booking and 150 per trip). Saved straight away; remove with the bin button.
+- They show as chips on the booking (Overview, Itinerary, Checklist) and open in the browser's
+  own viewer, in a new tab.
+- **Private:** a document is only ever served to people planning that trip, checked on every
+  request (`src/app/documents/[id]/route.ts`); anyone else gets the same "not found" as a file
+  that doesn't exist. Never on public or link-only pages, never copied, never cached by the
+  browser beyond this app's own offline copy.
+- Only real PDFs and photos are accepted, judged by the file's contents, not its name. PDFs are
+  kept exactly as uploaded; photos are re-encoded (dropping camera data such as GPS) and kept
+  sharp enough for QR codes.
+- **Offline:** documents on saved trips are saved with them, and open with no signal. Logging
+  out deletes them from the device along with everything else.
 
 ### Ideas from other travellers
 
@@ -366,6 +384,46 @@ open with no signal (read-only).
 - Confirmation numbers and private notes are visible to the group, but still never shown on
   public/unlisted pages or copied.
 
+### Splitting costs
+
+On a trip with more than one person, each booking's form has **Splitting the cost**:
+
+- **Who paid** (someone on the trip, or not said yet) and **Split between** (everyone by
+  default; switch people off for things only some of you do).
+- The Budget tab's **Who paid** card shows what each person paid, their share and their
+  balance ("gets back €37.50", "owes €37.50"), all in the trip's currency (foreign prices are
+  converted), worked out to the cent.
+- **To settle up** lists the fewest payments that square everyone. **Mark as paid** records
+  one; recorded payments can be undone. If the trip's currency changes later, earlier payments
+  are converted.
+- Bookings without a "Who paid" aren't split, and the card says how much that is. If someone
+  leaves the trip, bookings only they shared are split between everyone left.
+- Who paid, the split and payments are the group's own business: never on public or unlisted
+  pages, and not copied.
+- In the demo data, Lukas's rail trip is planned with Sophie (log in as either).
+
+### Reminder emails
+
+Everyone planning a trip (owner and members) gets:
+
+- **Still to book:** when something on the trip is still "to book" or "to buy" and it's 2 weeks
+  away, then again at 3 days. Bookings without a date count from the day you arrive at their
+  stop. Everything due that day comes in one email per trip.
+- **Starts tomorrow:** the day before the trip's start date, with the first stop and how many
+  things are still to book.
+
+Each reminder is sent once, however often the job runs. Switch them off under **Profile →
+Emails**, or with **Stop reminder emails** at the bottom of any reminder (no login needed;
+the link only works for the account it was sent to, and the page asks before switching
+off, since mail scanners open links too). Mail apps' own "Unsubscribe" button works as well.
+
+The job runs once a day on Vercel (`vercel.json`, 07:00 UTC), protected by `CRON_SECRET`.
+**Try it locally:** with the dev server running, open
+[http://localhost:3000/api/cron/reminders](http://localhost:3000/api/cron/reminders). It
+shows how many trips and emails it handled, and the emails print in the `npm run dev`
+terminal. A second run sends nothing new. To see them again, give a demo trip a start date
+of tomorrow, or a "to book" item a date 3 or 14 days away.
+
 ## Security
 
 How the three rules ("validate inputs", "users can only edit their own trips", "never expose
@@ -373,13 +431,17 @@ private trips") are enforced, and where.
 
 **Permissions: users can only edit their own trips**
 - Every server action is a public HTTP endpoint, so each one checks the caller itself before
-  touching data, whatever the UI sends (`src/server/actions/*`). There are 28, and nothing else
+  touching data, whatever the UI sends (`src/server/actions/*`). There are 33, and nothing else
   is exported from those files (anything exported from a `"use server"` file becomes callable).
 - Access checks live in one place, `src/server/permissions.ts`: `requireTripEditor`,
   `requireStopEditor` and `requireItemEditor` allow the owner and members; `requireTripOwner`
   guards delete, visibility, invites and removing people. Stops and items are looked up
   *through* their trip's editors, so passing your own trip id with someone else's item id
   doesn't work.
+- Two need no login: **Stop reminder emails** (`unsubscribeFromEmail`, and the one-click
+  `POST /api/unsubscribe`) only switch off reminders, and only with a link signed for that
+  account (HMAC of the user id with the server secret). The reminder job
+  (`/api/cron/reminders`) refuses calls without `CRON_SECRET` on the live site.
 - Someone else's trip and a trip that doesn't exist get the same "not found", so ids can't be
   probed. Signed-out callers are sent to the login page.
 - Public means "anyone can view and copy", never "anyone can edit".
@@ -398,6 +460,9 @@ private trips") are enforced, and where.
   `javascript:` or `data:` links). Statuses must fit the kind of item (a stay can't be
   "bought"). Photos are `https://` links or this site's own `/img/<id>`. Invalid Explore
   filters in the URL are ignored.
+- **Booking documents** (`/api/documents`, `/documents/<id>`): for the trip's planners only,
+  on every request; file type judged from the contents; PDFs served without the page policy
+  (so the browser's PDF viewer works) but with `nosniff`, no framing and no referrer.
 - **Uploads** (`/api/uploads`, logged in only, 20 a minute and 60 a day per person, 10 MB):
   every file is decoded and re-encoded as WebP with [sharp](https://sharp.pixelplumbing.com),
   so anything that isn't really an image is rejected, and camera metadata such as GPS
@@ -449,9 +514,44 @@ The integration tests never touch your dev data: they use a `tripstack_test` dat
 the dev one (override with `TEST_DATABASE_URL`) and empty it at the start of each run. The
 database name must end in `_test` or the tests refuse to start.
 
+### Browser tests
+
+Real clicks through the main journeys, in Chrome sized like a phone (Pixel 7), on a
+production build:
+
+- **Sign up and plan a first trip:** create a trip, add a stop with place search, add a
+  booking, tick it off on the checklist, see it in the budget.
+- **Logging in and out:** a wrong password is refused, logging out ends the session.
+- **Privacy:** Explore lists public trips only; public pages leave out confirmation numbers;
+  a private trip says "Page not found" to visitors and to other users; planning pages ask
+  you to log in.
+- **Copying** a public trip from Explore, without its owner's personal details.
+- **Planning together:** a member sees the shared trip, confirmation numbers and who owes what.
+- **Offline:** after visiting My trips, an upcoming trip opens with the connection off.
+
+```powershell
+npm run db:up               # needs Postgres running, and Google Chrome installed
+npm run test:e2e            # builds the app, starts it on port 3100, runs the tests (~2 min)
+npm run test:e2e:report     # after a failure in CI: open a downloaded report
+```
+
+They use their own `tripstack_e2e` database, reset and filled with the demo data each run
+(override with `E2E_DATABASE_URL`; the name must end in `_e2e`), so your dev data is never
+touched, and you can keep `npm run dev` running alongside. Place search answers with a
+made-up result and every request to other sites (map tiles, photos) is blocked, so the tests
+don't need the internet. On a failure there's a screenshot and a step-by-step trace in
+`test-results/` (open one with `npx playwright show-trace <path to trace.zip>`). The tests
+live in `e2e/`, the setup in `playwright.config.ts`.
+
+Two things the tests rely on that are worth knowing: pages stream, so a "not found" page
+still has HTTP status 200 (the tests check what's on screen), and logins are limited to 3
+tries per 10 seconds, so the login test waits and retries if it's refused.
+
 **On GitHub:** every push and pull request runs lint, types, unit tests, integration tests
-(against a Postgres service) and a production build (`.github/workflows/ci.yml`). The result
-shows as a tick or cross next to each commit, and in the repo's **Actions** tab.
+(against a Postgres service), a production build and the browser tests
+(`.github/workflows/ci.yml`). The result shows as a tick or cross next to each commit, and in
+the repo's **Actions** tab. If the browser tests fail, the run's **Artifacts** has
+`browser-test-results` with screenshots and traces.
 
 ### Accessibility
 
@@ -544,4 +644,5 @@ src/server/            session, permissions, read queries, server actions, rate 
 src/proxy.ts           fast redirect to /login for signed-out visitors
 src/generated/         Prisma client (generated, not committed)
 test/integration/      permission, privacy and validation tests (real database)
+e2e/                   browser tests of the main journeys (Playwright, playwright.config.ts)
 ```

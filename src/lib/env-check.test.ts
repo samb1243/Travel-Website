@@ -9,6 +9,7 @@ const good = {
   EMAIL_FROM: "Tripster <hello@tripster.example.com>",
   NEXT_PUBLIC_MAPTILER_KEY: "abcdefgh1234",
   NOMINATIM_USER_AGENT: "Tripster (https://tripster.example.com)",
+  CRON_SECRET: "c7Hq2Lx9Vb4Nm1Pz8Kd3Rf6Tw0Ys5Ja",
 };
 
 describe("checkProductionSettings", () => {
@@ -32,8 +33,8 @@ describe("checkProductionSettings", () => {
   });
 
   it("only warns about optional services", () => {
-    const { errors, warnings } = checkProductionSettings({ ...good, RESEND_API_KEY: "", NEXT_PUBLIC_MAPTILER_KEY: undefined, GOOGLE_CLIENT_ID: "x" });
+    const { errors, warnings } = checkProductionSettings({ ...good, RESEND_API_KEY: "", NEXT_PUBLIC_MAPTILER_KEY: undefined, GOOGLE_CLIENT_ID: "x", CRON_SECRET: "" });
     expect(errors).toEqual([]);
-    expect(warnings).toHaveLength(3);
+    expect(warnings).toHaveLength(4);
   });
 });

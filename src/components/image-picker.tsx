@@ -15,7 +15,7 @@ const MAX_SEND_BYTES = 4_000_000;
  * them anyway). Returns the file unchanged if it's small enough or the
  * browser can't read it (the server then says what's wrong).
  */
-async function shrinkIfLarge(file: File): Promise<Blob> {
+export async function shrinkIfLarge(file: File): Promise<Blob> {
   if (file.size <= MAX_SEND_BYTES) return file;
   try {
     const bitmap = await createImageBitmap(file);

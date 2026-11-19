@@ -16,6 +16,9 @@ import {
 import { copyTrip, setSaved, setVisibility } from "@/server/actions/sharing";
 import { createTrip, deleteTrip, updateTrip } from "@/server/actions/trips";
 import { setProfilePhoto, updateProfile } from "@/server/actions/profile";
+import { deleteSettlement, recordSettlement } from "@/server/actions/split";
+import { deleteDocument } from "@/server/actions/documents";
+import { setEmailReminders } from "@/server/actions/reminders";
 import { loadEditorTrip } from "@/server/trip-page";
 import { getTripBuilderData, getTripForEditor } from "@/server/trips";
 import type { CurrentUser } from "@/server/session";
@@ -202,6 +205,10 @@ describe("signed out", () => {
     ["copyTrip (even a public trip)", () => copyTrip(publicFixture.trip.id, { startDate: "" })],
     ["updateProfile", () => updateProfile({ ok: false }, new FormData())],
     ["setProfilePhoto", () => setProfilePhoto("https://example.com/me.jpg")],
+    ["recordSettlement", () => recordSettlement(fixture.trip.id, { fromId: owner.id, toId: owner.id, amount: 1 })],
+    ["deleteSettlement", () => deleteSettlement("any-id")],
+    ["deleteDocument", () => deleteDocument("any-id")],
+    ["setEmailReminders", () => setEmailReminders(false)],
   ];
 
   for (const [name, attempt] of attempts) {

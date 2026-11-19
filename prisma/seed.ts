@@ -23,7 +23,7 @@ const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 });
 
-function itemData(item: SeedItem, tripStart: Date, position: number) {
+function itemData(item: SeedItem, tripStart: Date, position: number, users: Map<string, string>) {
   const when = (at?: [number, string?]) => {
     if (!at) return null;
     const day = addDays(tripStart, at[0]);
@@ -47,6 +47,8 @@ function itemData(item: SeedItem, tripStart: Date, position: number) {
     confirmationCode: item.confirmationCode ?? null,
     notes: item.notes ?? null,
     privateNotes: item.privateNotes ?? null,
+    // Relation form (not paidById): these items are created with createdBy too
+    ...(item.paidBy && users.has(item.paidBy) ? { paidBy: { connect: { id: users.get(item.paidBy)! } } } : {}),
     links: {
       create: (item.links ?? []).map((l, i) => ({ ...l, position: i })),
     },
@@ -116,7 +118,7 @@ async function main() {
         items: {
           create: [...(t.items ?? [])]
             .sort(byStart)
-            .map((item, i) => ({ ...itemData(item, start, i), createdBy: { connect: { id: ownerId } } })),
+            .map((item, i) => ({ ...itemData(item, start, i, users), createdBy: { connect: { id: ownerId } } })),
         },
       },
     });
@@ -139,12 +141,21 @@ async function main() {
             create: [...(s.items ?? [])]
               .sort(byStart)
               .map((item, i) => ({
-                ...itemData(item, start, i),
+                ...itemData(item, start, i, users),
                 trip: { connect: { id: trip.id } },
                 createdBy: { connect: { id: ownerId } },
               })),
           },
         },
+      });
+    }
+
+    for (const email of t.members ?? []) {
+      await db.tripMember.create({ data: { tripId: trip.id, userId: users.get(email)! } });
+    }
+    for (const p of t.settlements ?? []) {
+      await db.settlement.create({
+        data: { tripId: trip.id, fromId: users.get(p.from)!, toId: users.get(p.to)!, amount: p.amount, currency: t.currency, createdById: ownerId },
       });
     }
 

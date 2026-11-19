@@ -9,6 +9,7 @@
 export const OFFLINE_CACHE_VERSION = "v1";
 export const PAGES_CACHE = `tripster-pages-${OFFLINE_CACHE_VERSION}`;
 export const IMAGES_CACHE = `tripster-images-${OFFLINE_CACHE_VERSION}`;
+export const DOCS_CACHE = `tripster-docs-${OFFLINE_CACHE_VERSION}`;
 export const INDEX_URL = "/__offline-index";
 
 /** How many trips are saved in the background */
@@ -76,7 +77,7 @@ export function saveForOffline(user: string, pages: OfflinePage[]) {
 export async function clearOffline() {
   if (!offlineSupported()) return;
   // Straight from the page too, in case the service worker isn't running
-  await Promise.all([caches.delete(PAGES_CACHE), caches.delete(IMAGES_CACHE)]).catch(() => {});
+  await Promise.all([caches.delete(PAGES_CACHE), caches.delete(IMAGES_CACHE), caches.delete(DOCS_CACHE)]).catch(() => {});
   await ask({ type: "clear" }, 5_000).catch(() => null);
 }
 

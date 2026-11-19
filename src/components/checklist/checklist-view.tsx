@@ -9,6 +9,7 @@ import { AlarmClockIcon, CalendarXIcon, CheckIcon, ChevronDownIcon, ClipboardLis
 import { AddedBy } from "@/components/builder/item-card";
 import { ItemSheet, type ItemSheetState } from "@/components/builder/item-sheet";
 import { AddConfirmationChip } from "@/components/builder/status-badges";
+import { DocumentChip } from "@/components/builder/documents-field";
 import { EmptyState } from "@/components/empty-state";
 import { BookingProgress } from "@/components/trip/booking-progress";
 import { Button } from "@/components/ui/button";
@@ -433,6 +434,9 @@ function ChecklistRow({
             ) : null}
 
             {item.needsOwnConfirmation ? <AddConfirmationChip onClick={onEdit} className="h-9 px-3" /> : null}
+            {item.documents.map((d) => (
+              <DocumentChip key={d.id} doc={d} className="h-9 rounded-full" />
+            ))}
 
             {bookingLink ? (
               <a

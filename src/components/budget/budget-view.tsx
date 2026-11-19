@@ -15,6 +15,7 @@ import { formatMoney, formatPrice, toCents } from "@/lib/money";
 import { RATES_CREDIT } from "@/lib/rates-fetch";
 import { effectivePayment, isOpen, PAYMENT_META, STATUS_META } from "@/lib/status";
 import { cn } from "@/lib/utils";
+import { SplitCard, type SplitCardData } from "@/components/budget/split-card";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
 
 const LEVEL_STYLE: Record<BudgetLevel, { bar: string; text: string }> = {
@@ -44,6 +45,7 @@ export function BudgetView({
   items,
   stops,
   readOnly = false,
+  split = null,
 }: {
   tripId: string;
   currency: string;
@@ -54,6 +56,8 @@ export function BudgetView({
   stops: BuilderStop[];
   /** Shared view: no editing */
   readOnly?: boolean;
+  /** Trips planned together: the people and their settle-ups, for "Who paid" */
+  split?: SplitCardData | null;
 }) {
   const [sheet, setSheet] = useState<ItemSheetState>(null);
   const money = (n: number) => formatMoney(n, currency);
@@ -162,6 +166,8 @@ export function BudgetView({
           {s.missingCost > 0 ? ` ${plural(s.missingCost, "item")} without a price ${s.missingCost === 1 ? "isn't" : "aren't"} counted.` : ""}
         </p>
       </section>
+
+      {split && !readOnly ? <SplitCard tripId={tripId} currency={currency} items={items} split={split} /> : null}
 
       {/* Paid vs still to pay */}
       {/* Booking and payment status are the planners' own business: not shown on other people's trips */}

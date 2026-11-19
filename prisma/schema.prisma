@@ -89,18 +89,25 @@ model User {
   homeCurrency  String   @default("EUR") @db.Char(3)
   /// Their own colour coding (src/lib/colors.ts): { "booked": "#10b981", ... }
   colors        Json?
+  /// Booking reminder and trip-eve emails (Profile; every email can switch them off)
+  emailReminders Boolean @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   trips       Trip[]
   savedTrips  SavedTrip[]
   memberships TripMember[]
+  remindersSent ReminderLog[]
   invites     TripInvite[]
   itemsAdded  Item[]       @relation("ItemsAdded")
+  itemsPaid   Item[]       @relation("ItemsPaid")
+  paymentsMade     Settlement[] @relation("SettlementFrom")
+  paymentsReceived Settlement[] @relation("SettlementTo")
   calendarFeeds CalendarFeed[]
   sessions   Session[]
   accounts   Account[]
   uploads       Upload[]
+  documentsAdded ItemDocument[]
 }
 
 // --- Better Auth tables (field names must match Better Auth's schema) -------
@@ -192,6 +199,7 @@ model Trip {
   items   Item[]
   savedBy SavedTrip[]
   members TripMember[]
+  settlements Settlement[]
   invites TripInvite[]
   calendarFeeds CalendarFeed[]
 
@@ -268,10 +276,17 @@ model Item {
   /// that account was deleted.
   createdById      String?
   createdBy        User?        @relation("ItemsAdded", fields: [createdById], references: [id], onDelete: SetNull)
+  /// Splitting costs on trips planned together: who paid for it (null = not
+  /// said), and who shares it (user ids; empty = everyone on the trip).
+  /// Personal to the group: never on shared pages, never copied.
+  paidById         String?
+  paidBy           User?        @relation("ItemsPaid", fields: [paidById], references: [id], onDelete: SetNull)
+  splitWith        String[]     @default([])
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
-  links ItemLink[]
+  links     ItemLink[]
+  documents ItemDocument[]
 
   @@index([tripId, status])
   @@index([stopId])
@@ -397,4 +412,59 @@ model RateLimit {
   count       Int
   /// ms since 1970 (a double holds these exactly)
   lastRequest Float
+}
+
+/// "Ben paid Maya back €40": money between people on a trip planned
+/// together, to settle what the split costs say they owe. Private to the group.
+model Settlement {
+  id          String   @id @default(cuid())
+  tripId      String
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  fromId      String
+  from        User     @relation("SettlementFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  toId        String
+  to          User     @relation("SettlementTo", fields: [toId], references: [id], onDelete: Cascade)
+  amount      Decimal  @db.Decimal(14, 2)
+  /// The trip's currency when it was recorded
+  currency    String   @db.Char(3)
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([tripId])
+}
+
+/// A ticket, pass, visa or booking confirmation attached to a booking. Personal:
+/// served only to the trip's planners (src/app/documents/[id]/route.ts), never
+/// on shared pages, never copied. PDFs kept as they are; photos re-encoded.
+model ItemDocument {
+  id           String   @id @default(cuid())
+  itemId       String
+  item         Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  /// Copied from the item, for the access check and per-trip limits
+  tripId       String
+  /// Shown name, e.g. "Boarding pass TG917.pdf"
+  name         String
+  contentType  String
+  bytes        Bytes
+  size         Int
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([itemId])
+  @@index([tripId])
+}
+
+/// Reminder emails already sent, so each goes out once: "book-soon" per item
+/// and threshold (14 and 3 days), "trip-eve" per trip and start date.
+model ReminderLog {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// e.g. "book-soon:<itemId>:14", "trip-eve:<tripId>:2027-05-01"
+  key    String
+  sentAt DateTime @default(now())
+
+  @@unique([userId, key])
+  @@index([sentAt])
 }

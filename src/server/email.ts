@@ -1,7 +1,13 @@
 import "server-only";
 import { Resend } from "resend";
 
-type Email = { to: string; subject: string; text: string };
+type Email = {
+  to: string;
+  subject: string;
+  text: string;
+  /** e.g. List-Unsubscribe, so mail apps show their own "unsubscribe" button */
+  headers?: Record<string, string>;
+};
 
 // Emails (password resets) go out through Resend when RESEND_API_KEY and
 // EMAIL_FROM are set. Without them, in development, they're printed to the
@@ -24,6 +30,7 @@ export async function sendEmail(email: Email): Promise<void> {
         to: email.to,
         subject: email.subject,
         text: email.text,
+        headers: email.headers,
       });
       if (error) console.error(`[email] Resend refused "${email.subject}": ${error.message}`);
     } catch (e) {

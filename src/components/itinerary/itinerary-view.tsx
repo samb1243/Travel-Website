@@ -18,6 +18,7 @@ import { STATUS_META } from "@/lib/status";
 import { mapLinksFor } from "@/lib/map-links";
 import { AddConfirmationChip, MapLinks, StatusBadges } from "@/components/builder/status-badges";
 import { ItemPhoto } from "@/components/builder/item-photo";
+import { DocumentChip } from "@/components/builder/documents-field";
 import { cn } from "@/lib/utils";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
 
@@ -288,7 +289,8 @@ function Entry({
     : null;
   const details = [kindLabel, route && route !== item.title ? route : null, range, item.provider].filter(Boolean).join(" · ");
   const showExtras =
-    kind !== "end" && (item.links.length > 0 || item.confirmationCode || item.needsOwnConfirmation || item.imageUrl || mapLinksFor(item).length > 0);
+    kind !== "end" &&
+    (item.links.length > 0 || item.confirmationCode || item.needsOwnConfirmation || item.imageUrl || item.documents.length > 0 || mapLinksFor(item).length > 0);
 
   return (
     <li className="flex gap-3">
@@ -327,6 +329,9 @@ function Entry({
             {item.imageUrl ? <ItemPhoto src={item.imageUrl} alt={item.title} className="mb-0.5" /> : null}
             {item.needsOwnConfirmation && onEdit ? <AddConfirmationChip onClick={onEdit} className="h-10 px-3.5 text-sm" /> : null}
             {item.confirmationCode ? <CopyCode code={item.confirmationCode} /> : null}
+            {item.documents.map((d) => (
+              <DocumentChip key={d.id} doc={d} />
+            ))}
             <MapLinks item={item} className="contents" />
             {item.links.map((l) => {
               const LinkIcon = LINK_KIND_META[l.kind].icon;

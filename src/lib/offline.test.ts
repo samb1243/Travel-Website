@@ -39,6 +39,9 @@ describe("public/sw.js", () => {
     expect(sw).toContain(`const VERSION = "${OFFLINE_CACHE_VERSION}";`);
     expect(sw).toContain("tripster-pages-${VERSION}");
     expect(sw).toContain("tripster-images-${VERSION}");
+    expect(sw).toContain("tripster-docs-${VERSION}");
+    // Logging out deletes saved tickets and documents too
+    expect(/clearSaved[\s\S]*?caches\.delete\(DOCS_CACHE\)/.test(sw)).toBe(true);
     expect(sw).toContain(`const INDEX_URL = "${INDEX_URL}";`);
   });
 

@@ -9,6 +9,7 @@ import { LINK_KIND_META, linkButtonLabel } from "@/lib/item-categories";
 import { formatItemWhen } from "@/lib/format";
 import { mapLinksFor } from "@/lib/map-links";
 import { ItemPhoto } from "@/components/builder/item-photo";
+import { DocumentChip } from "@/components/builder/documents-field";
 import { STATUS_META } from "@/lib/status";
 import { AddConfirmationChip, MapLinks, StatusBadges } from "@/components/builder/status-badges";
 import { cn } from "@/lib/utils";
@@ -71,10 +72,13 @@ export function ItemCard({
         </div>
       ) : null}
 
-      {item.links.length || item.confirmationCode || item.needsOwnConfirmation || mapLinksFor(item).length ? (
+      {item.links.length || item.confirmationCode || item.needsOwnConfirmation || item.documents.length || mapLinksFor(item).length ? (
         <div className="flex flex-wrap gap-2 px-3 pb-3">
           {item.needsOwnConfirmation && onEdit ? <AddConfirmationChip onClick={onEdit} className="h-10 rounded-lg px-3 text-sm" /> : null}
           {item.confirmationCode ? <CopyCode code={item.confirmationCode} /> : null}
+          {item.documents.map((d) => (
+            <DocumentChip key={d.id} doc={d} />
+          ))}
           <MapLinks item={item} className="contents" />
           {item.links.map((l) => {
             const LinkIcon = LINK_KIND_META[l.kind].icon;

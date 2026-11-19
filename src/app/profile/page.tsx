@@ -5,6 +5,7 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { ChangePasswordForm } from "@/components/profile/change-password-form";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { ColorSettings } from "@/components/profile/color-settings";
+import { ReminderSettings } from "@/components/profile/reminder-settings";
 import { cleanCustomColors } from "@/lib/colors";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/db";
@@ -36,7 +37,7 @@ async function Profile() {
   const user = await requireUser("/profile");
   const [accounts, prefs] = await Promise.all([
     db.account.findMany({ where: { userId: user.id }, select: { providerId: true } }),
-    db.user.findUnique({ where: { id: user.id }, select: { colors: true } }),
+    db.user.findUnique({ where: { id: user.id }, select: { colors: true, emailReminders: true } }),
   ]);
   const hasPassword = accounts.some((a) => a.providerId === "credential");
   const hasGoogle = accounts.some((a) => a.providerId === "google");
@@ -49,6 +50,10 @@ async function Profile() {
 
       <Section title="Colours">
         <ColorSettings saved={cleanCustomColors(prefs?.colors)} />
+      </Section>
+
+      <Section title="Emails">
+        <ReminderSettings on={prefs?.emailReminders ?? true} />
       </Section>
 
       <Section title="Sign-in methods">

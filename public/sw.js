@@ -15,6 +15,8 @@ const VERSION = "v1";
 const STATIC_CACHE = `tripster-static-${VERSION}`;
 const PAGES_CACHE = `tripster-pages-${VERSION}`;
 const IMAGES_CACHE = `tripster-images-${VERSION}`;
+/** Tickets and documents on saved trips (personal: deleted with everything else at logout) */
+const DOCS_CACHE = `tripster-docs-${VERSION}`;
 const OFFLINE_URL = "/offline";
 const INDEX_URL = "/__offline-index";
 const MAX_PAGES = 120;
@@ -58,6 +60,7 @@ async function store(cache, key, res) {
   await cache.delete(key, { ignoreVary: true });
   await cache.put(key, copy);
   await saveAssets(html);
+  await saveDocuments(html);
 }
 
 /** Saves the build files a page uses (they never change, so each is fetched once) */
@@ -89,7 +92,7 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  const keep = [STATIC_CACHE, PAGES_CACHE, IMAGES_CACHE];
+  const keep = [STATIC_CACHE, PAGES_CACHE, IMAGES_CACHE, DOCS_CACHE];
   event.waitUntil(
     caches
       .keys()
@@ -106,6 +109,8 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(cacheFirst(req, STATIC_CACHE));
+  } else if (url.pathname.startsWith("/documents/")) {
+    event.respondWith(document(req));
   } else if (url.pathname.startsWith("/img/")) {
     event.respondWith(cacheFirst(req, IMAGES_CACHE, MAX_IMAGES));
   } else if (APP_FILES.includes(url.pathname) || url.pathname.startsWith("/icons/")) {
@@ -128,6 +133,35 @@ async function networkFirst(req, cacheName) {
   } catch {
     return (await cache.match(req)) || Response.error();
   }
+}
+
+/** A ticket or document: fresh when online (access is checked each time), saved copy offline */
+async function document(req) {
+  const cache = await caches.open(DOCS_CACHE);
+  try {
+    const res = await fetch(req);
+    if (res.ok) await cache.put(req.url, res.clone());
+    else if (res.status === 404) await cache.delete(req.url); // removed, or no longer yours
+    return res;
+  } catch {
+    return (await cache.match(req.url)) || new Response("This file isn't saved on this device.", { status: 503 });
+  }
+}
+
+/** Saves the tickets and documents a saved page links to */
+async function saveDocuments(html) {
+  const urls = [...new Set(html.match(/\/documents\/[a-z0-9]{20,40}/g) || [])].slice(0, 60);
+  const cache = await caches.open(DOCS_CACHE);
+  await Promise.all(
+    urls.map(async (u) => {
+      try {
+        const res = await fetch(u, { credentials: "same-origin" });
+        if (res.ok) await cache.put(self.location.origin + u, res);
+      } catch {
+        // not saved this time; it will be next time
+      }
+    }),
+  );
 }
 
 async function cacheFirst(req, cacheName, max) {
@@ -210,7 +244,7 @@ async function trim(cache, max, keepUrls = []) {
 }
 
 async function clearSaved() {
-  await Promise.all([caches.delete(PAGES_CACHE), caches.delete(IMAGES_CACHE)]);
+  await Promise.all([caches.delete(PAGES_CACHE), caches.delete(IMAGES_CACHE), caches.delete(DOCS_CACHE)]);
   await storeOfflinePage();
 }
 

@@ -10,6 +10,7 @@ Keep every key and password in a password manager, never in a file in the repo.
       pooled connection string (`DATABASE_URL`) and the direct one (`DIRECT_URL`).
 - [ ] **Secret**, step 2: generate a new `BETTER_AUTH_SECRET` for the live site (PowerShell
       command in DEPLOY.md). Never reuse the local one; never change it later.
+      Make a second one the same way for `CRON_SECRET` (daily reminder emails).
 - [ ] **Vercel** (app), step 3: sign in with GitHub, import `samb1243/Travel-Website`, add the
       settings for Production, deploy. Then fix `BETTER_AUTH_URL` to the real
       `https://….vercel.app` address and redeploy. Set the functions region to match Neon's.
@@ -29,6 +30,8 @@ Keep every key and password in a password manager, never in a file in the repo.
 
 - [ ] Sign up, log out, log in.
 - [ ] Forgot password: the email arrives and the link works.
+- [ ] Vercel **Settings → Cron Jobs → Run** on the reminders job: the result shows in Logs,
+      and a trip starting tomorrow gets its "starts tomorrow" email.
 - [ ] Create a trip, find a stop with place search, add a booking.
 - [ ] Map tab shows MapTiler's map with its credit.
 - [ ] Upload a photo.

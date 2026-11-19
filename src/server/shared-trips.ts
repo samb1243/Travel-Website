@@ -118,6 +118,9 @@ function toSharedItem(i: SharedTripRow["items"][number], tripCurrency: string, r
     notes: i.notes,
     links: i.links.map((l) => ({ id: l.id, kind: l.kind, label: l.label, url: l.url })),
     addedBy: null, // group members' names are never shown on public pages
+    paidById: null, // nor who paid for what
+    splitWith: [],
+    documents: [], // tickets and documents are never shared
   });
 }
 

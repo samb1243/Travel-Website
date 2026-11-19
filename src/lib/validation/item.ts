@@ -62,6 +62,14 @@ export const itemSchema = z
     notes: optionalText(2000),
     privateNotes: optionalText(2000),
     links: z.array(linkSchema).max(MAX_LINKS, `${MAX_LINKS} links at most`),
+    /** Who paid (a person on the trip; "" = not said) */
+    paidById: z
+      .string()
+      .max(40)
+      .nullish()
+      .transform((v) => v || null),
+    /** Who shares the cost (people on the trip; empty = everyone) */
+    splitWith: z.array(z.string().min(1).max(40)).max(50).optional().default([]),
   })
   .superRefine((v, ctx) => {
     if (v.status && !statusesFor(v.category).includes(v.status)) {
@@ -110,6 +118,8 @@ export const itemSchema = z
     notes: v.notes,
     privateNotes: v.privateNotes,
     links: v.links,
+    paidById: v.paidById,
+    splitWith: [...new Set(v.splitWith)],
   }));
 
 export type ItemFormInput = z.input<typeof itemSchema>;

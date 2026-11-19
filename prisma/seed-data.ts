@@ -28,6 +28,8 @@ export type SeedItem = {
   notes?: string;
   privateNotes?: string;
   links?: SeedLink[];
+  /** Trips planned together: the email of who paid for it */
+  paidBy?: string;
 };
 
 export type SeedStop = {
@@ -60,6 +62,10 @@ export type SeedTrip = {
   stops: SeedStop[];
   /** Trip-wide items not tied to a stop (insurance, passes, gear) */
   items?: SeedItem[];
+  /** Planning together: emails of people who joined the trip */
+  members?: string[];
+  /** Money already paid back between them */
+  settlements?: { from: string; to: string; amount: number }[];
 };
 
 export type SeedUser = { name: string; email: string; homeCurrency: string };
@@ -630,10 +636,14 @@ const europeRail: SeedTrip = {
   currency: "EUR",
   budget: 3800,
   travellers: 2,
+  // Planned together with Sophie, splitting the costs (Budget → Who paid)
+  members: ["sophie@example.com"],
+  settlements: [{ from: "sophie@example.com", to: "lukas@example.com", amount: 100 }],
   items: [
     {
       category: "TRANSPORT",
       title: "Interrail Global Pass: 5 travel days in 1 month (×2)",
+      paidBy: "lukas@example.com",
       provider: "Interrail",
       cost: 590,
       status: "BOOKED",
@@ -645,6 +655,7 @@ const europeRail: SeedTrip = {
     {
       category: "OTHER",
       title: "Travel insurance (couple, 2 weeks)",
+      paidBy: "sophie@example.com",
       cost: 70,
       status: "BOUGHT",
       confirmationCode: "POL-77120",
@@ -662,6 +673,7 @@ const europeRail: SeedTrip = {
         {
           category: "TRANSPORT",
           title: "Eurostar London → Amsterdam",
+          paidBy: "lukas@example.com",
           provider: "Eurostar",
           start: [0, "09:01"],
           end: [0, "14:58"],
@@ -677,6 +689,7 @@ const europeRail: SeedTrip = {
         {
           category: "ACCOMMODATION",
           title: "Canal-side hotel in the Jordaan (3 nights)",
+          paidBy: "sophie@example.com",
           provider: "Booking.com",
           start: [0, "15:00"],
           end: [3, "11:00"],
@@ -689,6 +702,7 @@ const europeRail: SeedTrip = {
         {
           category: "ACTIVITY",
           title: "Rijksmuseum",
+          paidBy: "sophie@example.com",
           start: [1, "10:00"],
           end: [1, "13:00"],
           cost: 45,
@@ -741,6 +755,7 @@ const europeRail: SeedTrip = {
         {
           category: "ACCOMMODATION",
           title: "Apartment in Kreuzberg (3 nights)",
+          paidBy: "lukas@example.com",
           provider: "Airbnb",
           start: [3, "16:00"],
           end: [6, "10:00"],
@@ -772,6 +787,7 @@ const europeRail: SeedTrip = {
         {
           category: "FOOD",
           title: "Markthalle Neun street food Thursday",
+          paidBy: "sophie@example.com",
           start: [5, "18:00"],
           cost: 40,
           status: "NOT_NEEDED",
@@ -802,6 +818,7 @@ const europeRail: SeedTrip = {
         {
           category: "ACCOMMODATION",
           title: "Hotel near Old Town Square (3 nights)",
+          paidBy: "sophie@example.com",
           start: [6, "14:00"],
           end: [9, "10:00"],
           cost: 330,
@@ -821,6 +838,7 @@ const europeRail: SeedTrip = {
         {
           category: "FOOD",
           title: "Czech beer & food walking tour",
+          paidBy: "lukas@example.com",
           start: [7, "18:00"],
           end: [7, "21:30"],
           cost: 70,

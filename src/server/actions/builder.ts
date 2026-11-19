@@ -11,6 +11,7 @@ import { itemSchema, type ItemFormInput } from "@/lib/validation/item";
 import { stopOrderSchema, stopSchema, type StopInput } from "@/lib/validation/stop";
 import { requireItemEditor, requireStopEditor, requireTripEditor } from "@/server/permissions";
 import { refreshTripSummary } from "@/server/trip-summary";
+import { tripPeopleIds } from "@/server/people";
 
 // Server actions for the trip builder (stops and items). They're public HTTP
 // endpoints: each one checks access to the trip and validates its input,
@@ -112,6 +113,13 @@ export async function saveItem(
   // Store "same as the trip" as null, so it follows the trip's currency.
   const trip = await db.trip.findUniqueOrThrow({ where: { id: tripId }, select: { currency: true } });
   const data = { ...rest, currency: currency === trip.currency ? null : currency };
+
+  // Who paid and who shares it must be people on this trip
+  if (data.paidById || data.splitWith.length) {
+    const people = await tripPeopleIds(tripId);
+    if (data.paidById && !people.has(data.paidById)) return { ok: false, errors: { paidById: "Pick someone on this trip" } };
+    if (data.splitWith.some((p) => !people.has(p))) return { ok: false, errors: { splitWith: "Pick people on this trip" } };
+  }
 
   // The chosen stop must be on this trip.
   if (stopId) {
