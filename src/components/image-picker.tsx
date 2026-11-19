@@ -7,6 +7,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
+/** Hosts limit uploads to about 4.5 MB (Vercel), and phone photos are often bigger */
+const MAX_SEND_BYTES = 4_000_000;
+
+/**
+ * Large photos are made smaller here before upload (the server re-encodes
+ * them anyway). Returns the file unchanged if it's small enough or the
+ * browser can't read it (the server then says what's wrong).
+ */
+async function shrinkIfLarge(file: File): Promise<Blob> {
+  if (file.size <= MAX_SEND_BYTES) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 2400 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+    return blob && blob.size < file.size ? blob : file;
+  } catch {
+    return file;
+  }
+}
+
 /**
  * Pick a photo: upload one from this device, or paste a link to one on the
  * web. The value is the image's address ("/img/<id>" or "https://…"), "" for none.
@@ -45,7 +70,7 @@ export function ImagePicker({
     setUploadError(null);
     try {
       const body = new FormData();
-      body.set("file", file);
+      body.set("file", await shrinkIfLarge(file));
       body.set("purpose", purpose);
       const res = await fetch("/api/uploads", { method: "POST", body });
       const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };

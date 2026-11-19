@@ -24,8 +24,10 @@ export default async function setup() {
   if (exists.rowCount === 0) await client.query(`CREATE DATABASE "${dbName}"`);
   await client.end();
 
+  // DIRECT_URL too: prisma.config.ts prefers it for migrations, and it must
+  // never point anywhere but the test database here
   execSync("npx prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: url.toString() },
+    env: { ...process.env, DATABASE_URL: url.toString(), DIRECT_URL: url.toString() },
     stdio: "pipe",
   });
 

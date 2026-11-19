@@ -112,7 +112,7 @@ describe("reading an email's booking data", () => {
   it("refuses empty and oversized emails", async () => {
     signInAs(owner);
     expect(await readBookingEmail(f.trip.id, { subject: "", html: "", text: "  " })).toMatchObject({ ok: false });
-    expect(await readBookingEmail(f.trip.id, { subject: "", html: "", text: "x".repeat(500_001) })).toMatchObject({ ok: false });
+    expect(await readBookingEmail(f.trip.id, { subject: "", html: "", text: "x".repeat(250_001) })).toMatchObject({ ok: false });
   });
 });
 

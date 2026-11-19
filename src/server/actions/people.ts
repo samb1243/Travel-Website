@@ -75,7 +75,7 @@ export async function acceptInvite(inviteToken: string): Promise<ActionResult> {
   const user = await requireUser(`/invite/${encodeURIComponent(String(inviteToken))}`);
   const parsed = token.safeParse(inviteToken);
   if (!parsed.success) return { ok: false, message: "That invite link isn't valid." };
-  if (!rateLimit(`join:${user.id}`, 20, 60_000)) return { ok: false, message: "Too many tries. Wait a minute." };
+  if (!(await rateLimit(`join:${user.id}`, 20, 60_000))) return { ok: false, message: "Too many tries. Wait a minute." };
 
   const invite = await db.tripInvite.findUnique({
     where: { token: parsed.data },

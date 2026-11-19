@@ -1,4 +1,5 @@
 import "server-only";
+import { rateLimit } from "@/server/rate-limit";
 
 // Place search via OpenStreetMap's Nominatim (free, no API key).
 // Usage policy (https://operations.osmfoundation.org/policies/nominatim/):
@@ -45,6 +46,12 @@ function throttled<T>(fn: () => Promise<T>): Promise<T> {
   const run = queue.then(async () => {
     const wait = lastRequestAt + MIN_GAP_MS - Date.now();
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    // Across all server instances too (each Vercel instance has its own queue):
+    // take the shared one-per-second slot, waiting a little if another has it
+    for (let tries = 0; !(await rateLimit("nominatim:global", 1, MIN_GAP_MS)); tries++) {
+      if (tries >= 4) throw new Error("Place search is busy");
+      await new Promise((r) => setTimeout(r, MIN_GAP_MS));
+    }
     lastRequestAt = Date.now();
     return fn();
   });

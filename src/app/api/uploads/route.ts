@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   await connection();
   const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Log in to upload photos" }, { status: 401 });
-  if (!rateLimit(`upload:${user.id}`, 20, 60_000)) {
+  if (!(await rateLimit(`upload:${user.id}`, 20, 60_000))) {
     return Response.json({ error: "Too many uploads. Wait a minute and try again." }, { status: 429 });
   }
 

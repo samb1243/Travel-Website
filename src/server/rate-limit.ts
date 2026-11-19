@@ -1,27 +1,28 @@
 import "server-only";
+import { db } from "@/lib/db";
 
-// Simple sliding-window rate limiter, kept in memory.
-// Good enough for one server process. With several instances (serverless,
-// load-balanced) each keeps its own counts; move this to Redis/Upstash then.
-
-const buckets = new Map<string, number[]>();
+// Fixed-window rate limiter kept in Postgres, so every server instance (on
+// Vercel each request may land on a different one) shares the same counts.
+// One atomic statement per check: two requests at once can't both slip past.
 
 /**
  * Records a hit for `key` and says whether it's within `max` hits per
  * `windowMs`. Keys look like "copy:<userId>".
  */
-export function rateLimit(key: string, max: number, windowMs: number): boolean {
+export async function rateLimit(key: string, max: number, windowMs: number): Promise<boolean> {
   const now = Date.now();
-  const hits = (buckets.get(key) ?? []).filter((t) => now - t < windowMs);
-  if (hits.length >= max) {
-    buckets.set(key, hits);
-    return false;
+  const windowStart = BigInt(Math.floor(now / windowMs) * windowMs);
+  const rows = await db.$queryRaw<{ count: number }[]>`
+    INSERT INTO "AppRateLimit" ("key", "windowStart", "count")
+    VALUES (${key.slice(0, 200)}, ${windowStart}, 1)
+    ON CONFLICT ("key") DO UPDATE SET
+      "count" = CASE WHEN "AppRateLimit"."windowStart" = EXCLUDED."windowStart" THEN "AppRateLimit"."count" + 1 ELSE 1 END,
+      "windowStart" = EXCLUDED."windowStart"
+    RETURNING "count"`;
+
+  // Now and then, clear counters that haven't been used for a day
+  if (Math.random() < 0.01) {
+    await db.appRateLimit.deleteMany({ where: { windowStart: { lt: BigInt(now - 24 * 60 * 60 * 1000) } } }).catch(() => {});
   }
-  hits.push(now);
-  buckets.set(key, hits);
-  // Keep memory bounded: drop idle keys now and then.
-  if (buckets.size > 10_000) {
-    for (const [k, v] of buckets) if (!v.some((t) => now - t < windowMs)) buckets.delete(k);
-  }
-  return true;
+  return (rows[0]?.count ?? 0) <= max;
 }

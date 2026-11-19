@@ -21,8 +21,9 @@ export type EmailImportResult =
 
 const emailInput = z.object({
   subject: z.string().max(500).default(""),
-  html: z.string().max(1_500_000).default(""),
-  text: z.string().max(500_000).default(""),
+  // Together under the 1 MB limit Next.js puts on a server action request
+  html: z.string().max(700_000).default(""),
+  text: z.string().max(250_000).default(""),
 });
 
 type EmailInput = z.input<typeof emailInput>;
@@ -70,7 +71,7 @@ export async function readBookingEmail(tripId: string, input: EmailInput): Promi
 export async function readBookingEmailWithClaude(tripId: string, input: EmailInput): Promise<EmailImportResult> {
   const user = await requireTripEditor(tripId);
   if (!aiReadingAvailable()) return { ok: false, message: "Reading emails with Claude isn't set up on this server." };
-  if (!rateLimit(`email-ai:${user.id}`, 10, 60 * 60 * 1000)) {
+  if (!(await rateLimit(`email-ai:${user.id}`, 10, 60 * 60 * 1000))) {
     return { ok: false, message: "That's 10 emails read with Claude this hour. Try again later, or add bookings by hand." };
   }
   const parsed = emailInput.safeParse(input);

@@ -1,15 +1,39 @@
 import "server-only";
+import { Resend } from "resend";
 
 type Email = { to: string; subject: string; text: string };
 
+// Emails (password resets) go out through Resend when RESEND_API_KEY and
+// EMAIL_FROM are set. Without them, in development, they're printed to the
+// terminal running `npm run dev` instead.
+
+let client: Resend | null = null;
+
+export const emailConfigured = () => Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+
 /**
- * There's no email provider yet. In development, emails are printed to the
- * terminal running `npm run dev`. Plug a provider (Resend, Postmark, SES) in
- * here before deploying, otherwise password reset links can't be delivered.
+ * Sends an email. Never throws: a failed send is logged, not shown, so the
+ * "forgot password" form can't reveal which addresses have accounts.
  */
 export async function sendEmail(email: Email): Promise<void> {
+  if (emailConfigured()) {
+    client ??= new Resend(process.env.RESEND_API_KEY);
+    try {
+      const { error } = await client.emails.send({
+        from: process.env.EMAIL_FROM!, // e.g. "Tripster <hello@yourdomain.com>"
+        to: email.to,
+        subject: email.subject,
+        text: email.text,
+      });
+      if (error) console.error(`[email] Resend refused "${email.subject}": ${error.message}`);
+    } catch (e) {
+      console.error(`[email] Couldn't reach Resend for "${email.subject}":`, e instanceof Error ? e.message : e);
+    }
+    return;
+  }
+
   if (process.env.NODE_ENV === "production") {
-    console.error(`[email] No email provider configured; dropped "${email.subject}"`);
+    console.error(`[email] RESEND_API_KEY / EMAIL_FROM not set; dropped "${email.subject}"`);
     return;
   }
   console.log(

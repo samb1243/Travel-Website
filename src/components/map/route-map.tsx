@@ -5,15 +5,16 @@ import { useEffect, useRef } from "react";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import type { RoutePoint } from "@/lib/route-map";
 import { cn } from "@/lib/utils";
+import { tileSource } from "@/lib/map-tiles";
 
-// Leaflet + OpenStreetMap tiles. Leaflet needs `window`, so it's loaded inside
-// an effect rather than at import time.
+// Leaflet + OpenStreetMap-based tiles (MapTiler in production, see
+// src/lib/map-tiles.ts). Leaflet needs `window`, so it's loaded inside an
+// effect rather than at import time.
 //
 // Security: stop names are user content, so they're only ever set with
 // textContent. Leaflet's tooltip/popup string APIs treat strings as HTML.
 
-const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const TILES = tileSource();
 
 const PIN = "route-pin grid size-8 place-items-center rounded-full border-[3px] border-[#1c3a32] bg-trail text-sm font-extrabold text-trail-foreground transition-transform";
 const PIN_SELECTED = "route-pin-selected";
@@ -55,7 +56,7 @@ export function RouteMap({
         worldCopyJump: false,
       });
       mapRef.current = map;
-      L.tileLayer(TILE_URL, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(map);
+      L.tileLayer(TILES.url, { maxZoom: TILES.maxZoom, attribution: TILES.attribution }).addTo(map);
 
       const latLngs = points.map((p) => L.latLng(p.lat, p.lng));
       if (latLngs.length > 1) {

@@ -8,7 +8,7 @@ import { rateLimit } from "@/server/rate-limit";
 
 /** null if the user may create (or copy) another trip, else the reason they can't. */
 export async function checkNewTripAllowed(userId: string): Promise<string | null> {
-  if (!rateLimit(`new-trip:${userId}`, 20, 60_000)) return "That's a lot of new trips at once. Wait a minute and try again.";
+  if (!(await rateLimit(`new-trip:${userId}`, 20, 60_000))) return "That's a lot of new trips at once. Wait a minute and try again.";
   if ((await db.trip.count({ where: { ownerId: userId } })) >= MAX_TRIPS_PER_USER) {
     return `You can have up to ${MAX_TRIPS_PER_USER} trips. Delete an old one to make room.`;
   }

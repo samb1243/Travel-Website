@@ -64,6 +64,10 @@ export const auth = betterAuth({
     // and a revoked session stops working at once. Costs one indexed lookup.
   },
 
+  // Log-in, sign-up and password-reset limits (on in production) are kept in
+  // the database, so they hold across every server instance.
+  rateLimit: { storage: "database" },
+
   // Profile changes go through our own validated action (src/server/actions/profile.ts),
   // so Better Auth's generic "update user" endpoint is switched off.
   disabledPaths: ["/update-user"],

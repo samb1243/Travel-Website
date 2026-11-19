@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   await connection();
   const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Log in to search places" }, { status: 401 });
-  if (!allowed(user.id)) {
+  if (!(await allowed(user.id))) {
     return Response.json({ error: "Too many searches. Wait a minute and try again." }, { status: 429 });
   }
 

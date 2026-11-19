@@ -9,7 +9,7 @@ import { getStopIdeas, type StopIdeas } from "@/server/recommendations";
 export async function loadStopIdeas(stopId: string): Promise<({ ok: true } & StopIdeas) | { ok: false; message: string }> {
   const id = z.string().min(1).max(40).parse(stopId);
   const { user } = await requireStopEditor(id);
-  if (!rateLimit(`ideas:${user.id}`, 60, 60_000)) return { ok: false, message: "Too many requests. Wait a minute and try again." };
+  if (!(await rateLimit(`ideas:${user.id}`, 60, 60_000))) return { ok: false, message: "Too many requests. Wait a minute and try again." };
   const result = await getStopIdeas(id, user.id);
   if (!result) return { ok: false, message: "That stop no longer exists." };
   return { ok: true, ...result };

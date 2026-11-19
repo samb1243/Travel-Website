@@ -377,3 +377,24 @@ model Upload {
 
   @@index([userId, createdAt])
 }
+
+/// Counters for the app's own rate limits (src/server/rate-limit.ts). In the
+/// database so every server instance (e.g. on Vercel) shares the same counts.
+model AppRateLimit {
+  key         String @id
+  /// Start of the current window, in ms since 1970
+  windowStart BigInt
+  count       Int
+
+  @@index([windowStart])
+}
+
+/// Better Auth's own rate limits for log-in, sign-up and password reset
+/// (rateLimit.storage = "database" in src/lib/auth.ts)
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  /// ms since 1970 (a double holds these exactly)
+  lastRequest Float
+}

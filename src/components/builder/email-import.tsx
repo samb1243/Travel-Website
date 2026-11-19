@@ -72,6 +72,9 @@ export function EmailImport({
   function find() {
     const e = current();
     if (!e) return setError("Paste an email, or choose a saved .eml file.");
+    if (e.html.length > 700_000 || e.text.length > 250_000) {
+      return setError("That email is too big to read here. Copy and paste just the part with the booking.");
+    }
     setError(null);
     start(async () => {
       const result = await readBookingEmail(tripId, e);

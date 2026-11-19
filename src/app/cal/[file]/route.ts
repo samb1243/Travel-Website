@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/cal/[
   const { file } = await params;
   const token = file.replace(/\.ics$/, "");
   // Calendar apps poll every few hours; this only stops hammering.
-  if (!rateLimit(`cal:${token}`, 30, 60_000)) return new Response("Too many requests", { status: 429 });
+  if (!(await rateLimit(`cal:${token}`, 30, 60_000))) return new Response("Too many requests", { status: 429 });
 
   const feed = await calendarForFeed(token, request.nextUrl.origin);
   if (!feed) return new Response("Not found", { status: 404 });
