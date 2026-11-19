@@ -76,9 +76,9 @@ export function SharedTripTabs({ data, today }: { data: SharedTrip; today: strin
                       {i + 1}
                     </span>
                     <div className="min-w-0">
-                      <h3 className="font-heading text-xl font-extrabold">
+                      <h2 className="font-heading text-xl font-extrabold">
                         {stop.name}
-                      </h3>
+                      </h2>
                       <p className="text-sm text-muted-foreground">
                         {[dates, [stop.region, stop.country].filter(Boolean).join(", ") || null].filter(Boolean).join(" · ")}
                       </p>
@@ -102,7 +102,7 @@ export function SharedTripTabs({ data, today }: { data: SharedTrip; today: strin
             })}
             {show(tripItems).length ? (
               <li className="space-y-3">
-                <h3 className="font-heading text-xl font-extrabold">Whole trip</h3>
+                <h2 className="font-heading text-xl font-extrabold">Whole trip</h2>
                 <div className="space-y-2">
                   {show(tripItems).map((item) => (
                     <ItemCard key={item.id} item={item} currency={trip.currency} showStatus={false} />

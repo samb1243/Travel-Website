@@ -1,11 +1,34 @@
 import type { NextConfig } from "next";
 
-// Security headers for every response. A full Content-Security-Policy for
-// scripts needs per-request nonces (see README "Before going live"); these
-// directives are safe without one.
+const isDev = process.env.NODE_ENV === "development";
+
+// Content-Security-Policy. Not nonce-based on purpose: per-request nonces
+// would switch off Partial Prerendering (the static page shells this app uses)
+// and don't fit pages saved for offline use, so inline scripts (Next.js's own
+// page data, the theme script) stay allowed. What it does enforce: scripts,
+// styles and fonts only from this site, no fetching or posting data to other
+// sites, no plugins, no frames. Images may come from any https site (cover
+// photos, avatars and map tiles are links people choose).
+const csp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' https: data: blob:",
+  "font-src 'self' data:",
+  `connect-src 'self'${isDev ? " ws: wss:" : ""}`, // dev: hot reload
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "media-src 'self'",
+  "frame-src 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'", // nobody may put Tripster in a frame (clickjacking)
+].join("; ");
+
+// Security headers for every response.
 const securityHeaders = [
-  // Nobody may put Tripster in a frame (clickjacking).
-  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" },
+  { key: "Content-Security-Policy", value: csp },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Share links carry the trip slug; don't leak full URLs to other sites.

@@ -14,6 +14,11 @@ export function Tappable({
   children,
 }: {
   onClick?: () => void;
+  /**
+   * Said before the visible content by screen readers, e.g. "Edit". Added to
+   * the content rather than replacing it, so the spoken name always contains
+   * what's on screen (WCAG 2.5.3, label in name).
+   */
   label?: string;
   className?: string;
   /** Hover/focus styles, only applied when tappable */
@@ -25,13 +30,13 @@ export function Tappable({
     <button
       type="button"
       onClick={onClick}
-      aria-label={label}
       className={cn(
         className,
         "text-left focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
         interactiveClassName,
       )}
     >
+      {label ? <span className="sr-only">{label} </span> : null}
       {children}
     </button>
   );

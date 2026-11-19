@@ -1,0 +1,71 @@
+# Runs every check on each push and pull request: lint, types, unit tests,
+# integration tests against a real Postgres, and a production build. A red
+# cross on GitHub means something is broken before Vercel deploys it.
+
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: tripstack
+          POSTGRES_PASSWORD: tripstack
+          POSTGRES_DB: tripstack
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tripstack -d tripstack"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Throwaway values for this test run only; nothing here is a real secret
+    env:
+      DATABASE_URL: postgresql://tripstack:tripstack@localhost:5432/tripstack?schema=public
+      BETTER_AUTH_SECRET: ci-only-not-a-real-secret-0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Types
+        run: |
+          npx next typegen
+          npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Integration tests
+        run: npm run test:integration
+
+      - name: Build
+        run: npm run build

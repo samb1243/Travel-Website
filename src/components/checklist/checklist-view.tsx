@@ -221,7 +221,7 @@ export function ChecklistView({
             )}
           >
             {label}
-            {v === "payment" && leftToPay > 0 ? <span className="ml-1.5 tabular-nums opacity-80">· {leftToPay} to pay</span> : null}
+            {v === "payment" && leftToPay > 0 ? <span className="ml-1.5 tabular-nums">· {leftToPay} to pay</span> : null}
           </button>
         ))}
       </div>

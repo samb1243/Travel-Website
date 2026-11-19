@@ -55,6 +55,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: colorsScript }} />
       </head>
       <body className="flex min-h-full flex-col">
+        <a
+          href="#main"
+          className="sr-only z-50 rounded-lg bg-primary px-4 py-3 font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        >
+          Skip to content
+        </a>
         <ThemeSync />
         {/* The person's own colour coding (Profile → Colours) */}
         <Suspense fallback={null}>
@@ -64,7 +70,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <OfflineBanner />
         <ServiceWorkerRegister />
         {/* Bottom padding keeps content clear of the phone tab bar. */}
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-24 md:pb-10 print:max-w-none print:p-0">
+        <main id="main" tabIndex={-1} className="mx-auto w-full outline-none max-w-5xl flex-1 px-4 pt-6 pb-24 md:pb-10 print:max-w-none print:p-0">
           {children}
         </main>
         <MobileTabBar />

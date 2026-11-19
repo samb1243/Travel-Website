@@ -415,6 +415,13 @@ private trips") are enforced, and where.
   redirects only go to paths on this site (`src/lib/safe-redirect.ts`).
 - Security headers on every page (`next.config.ts`): no framing by other sites, no MIME
   sniffing, a strict referrer policy, camera/microphone/location off, HSTS on HTTPS.
+- **Content-Security-Policy:** scripts, styles and fonts only from Tripster itself, no
+  fetching or posting data to other sites, no plugins or frames; images from any `https` site
+  (covers, avatars and map tiles are links people choose). It isn't nonce-based on purpose:
+  nonces would switch off Partial Prerendering and don't fit pages saved for offline use, so
+  inline scripts (Next.js's page data, the theme script) stay allowed.
+- Errors show a friendly page with a reference number that matches the server log, never the
+  error itself (`src/app/error.tsx`, `src/app/global-error.tsx`).
 - External links open with `rel="noopener noreferrer"`. React escapes all text, and stop
   names on the map are set as plain text (Leaflet's own APIs would treat them as HTML).
 
@@ -442,26 +449,52 @@ The integration tests never touch your dev data: they use a `tripstack_test` dat
 the dev one (override with `TEST_DATABASE_URL`) and empty it at the start of each run. The
 database name must end in `_test` or the tests refuse to start.
 
+**On GitHub:** every push and pull request runs lint, types, unit tests, integration tests
+(against a Postgres service) and a production build (`.github/workflows/ci.yml`). The result
+shows as a tick or cross next to each commit, and in the repo's **Actions** tab.
+
+### Accessibility
+
+Checked against WCAG 2.1 AA with [axe-core](https://github.com/dequelabs/axe-core) on every main
+page, in light and dark mode at phone size (all clean), plus keyboard checks:
+
+- **Skip to content** is the first thing Tab reaches; every control has a visible focus ring.
+- Sheets (booking forms, imports, ideas) keep focus inside while open, close with Escape, and
+  hand focus back to what opened them.
+- Booking cards are buttons named "Edit" plus what they show, so the spoken name matches
+  the screen; status chips and filters say whether they're pressed.
+- Headings go in order (one `h1` per page); text meets 4.5:1 contrast, icons and controls 3:1.
+  Custom colours pick black or white text for whichever reads better.
+
+Automated checks catch only part of the problems; a pass with a real screen reader (NVDA on
+Windows, VoiceOver on iPhone) is still worth doing before launch.
+
 ## Before going live
 
-- [ ] Set a long random `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL` / `APP_URL` to the real
-      `https://` address. Better Auth sets secure cookies and turns on its built-in
-      rate limiting for login and sign-up in production.
-- [ ] Use a managed Postgres with backups; run `npx prisma migrate deploy` on each deploy.
-      Never run `npm run db:seed` there.
-- [ ] Send real emails for password resets (replace the console sender in
-      `src/server/email.ts` with Resend, Postmark, SES…).
-- [ ] Switch map tiles to a hosted provider: the free OpenStreetMap tile servers don't allow
-      heavy app traffic ([tile policy](https://operations.osmfoundation.org/policies/tiles/)).
-      Change `TILE_URL` in `src/components/map/route-map.tsx` and keep the attribution.
-- [ ] Set `NOMINATIM_USER_AGENT` (or move to a hosted geocoder) for place search.
-- [ ] The rate limits are kept in memory per server. With several instances or serverless,
-      move `src/server/rate-limit.ts` to Redis/Upstash.
-- [ ] Consider a full Content-Security-Policy with per-request nonces (generated in
-      `src/proxy.ts`) to also restrict scripts; the current headers don't cover scripts.
-- [ ] Uploaded photos are stored in the database (the `Upload` table), which is simplest to run
-      but grows the database. With many users, move them to object storage (e.g. Vercel Blob,
-      S3, Cloudflare R2) behind the same `/img/<id>` route (`src/server/uploads.ts`).
+**[DEPLOY.md](DEPLOY.md)** walks through putting Tripster online on Vercel + Neon, with Resend
+for email and MapTiler for maps: accounts to create, settings to copy, and a checklist to
+confirm it works. **[GO-LIVE-CHECKLIST.md](GO-LIVE-CHECKLIST.md)** is the short to-do list to tick
+off. What the code already does for a live site:
+
+- **Settings check:** in production the server refuses to start without `DATABASE_URL`, a real
+  `BETTER_AUTH_SECRET` and an `https://` `BETTER_AUTH_URL` (`src/lib/env-check.ts`), and logs a
+  warning for each optional service that isn't set up.
+- **Email:** password resets go out through Resend when `RESEND_API_KEY` and `EMAIL_FROM` are
+  set (`src/server/email.ts`); locally they're printed in the terminal.
+- **Maps:** MapTiler tiles when `NEXT_PUBLIC_MAPTILER_KEY` is set, OpenStreetMap's own tiles
+  otherwise (`src/lib/map-tiles.ts`).
+- **Rate limits** are kept in Postgres (`AppRateLimit`, and Better Auth's `RateLimit` for
+  log-in and sign-up), so they hold across every server instance; place search keeps to one
+  request a second for the whole site the same way.
+- **Migrations** run on every Vercel deploy (`vercel-build`), through Neon's direct connection
+  (`DIRECT_URL`).
+
+Still worth doing as it grows:
+
+- [ ] If the app ever needs a strict script policy (no inline scripts at all): per-request
+      nonces generated in `src/proxy.ts`, at the cost of Partial Prerendering.
+- [ ] Move uploaded photos from the database (`Upload` table) to file storage (Vercel Blob,
+      Cloudflare R2) behind the same `/img/<id>` route (`src/server/uploads.ts`).
 - [ ] Pasted photo and avatar links load from other sites in viewers' browsers. Consider
       re-hosting them too if that matters.
 - [ ] Check the name "Tripster" isn't taken where you launch; other travel businesses use it.

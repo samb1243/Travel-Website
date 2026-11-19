@@ -30,9 +30,9 @@ export function ExploreTripCard({ trip }: { trip: ExploreCard }) {
       </div>
       <div className="space-y-3 px-1 pt-3.5">
         <div>
-          <h3 className="font-heading text-xl leading-tight font-extrabold text-balance decoration-trail decoration-4 underline-offset-4 group-hover:underline">
+          <h2 className="font-heading text-xl leading-tight font-extrabold text-balance decoration-trail decoration-4 underline-offset-4 group-hover:underline">
             {trip.title}
-          </h3>
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {facts}, by {trip.authorName}
           </p>

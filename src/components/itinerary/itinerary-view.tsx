@@ -304,7 +304,7 @@ function Entry({
       >
         <Tappable
           onClick={onEdit}
-          label={`Edit ${item.title}`}
+          label="Edit"
           className="flex w-full items-start gap-2.5 rounded-xl p-2.5"
           interactiveClassName="hover:bg-accent/40"
         >

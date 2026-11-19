@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
@@ -19,10 +19,25 @@ export function ResponsiveSheet({
   children: ReactNode;
 }) {
   const desktop = useMediaQuery("(min-width: 768px)");
+  // These sheets open from code (tapping a card), not from a dialog trigger, so
+  // remember what had focus and give it back on close: keyboard and screen
+  // reader users land where they were, not at the top of the page.
+  const returnFocusTo = useRef<HTMLElement | null>(null);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side={desktop ? "right" : "bottom"}
+        onOpenAutoFocus={() => {
+          const el = document.activeElement;
+          returnFocusTo.current = el instanceof HTMLElement && el !== document.body ? el : null;
+        }}
+        onCloseAutoFocus={(e) => {
+          const el = returnFocusTo.current;
+          if (el?.isConnected) {
+            e.preventDefault();
+            el.focus();
+          }
+        }}
         className={
           desktop
             ? "w-full gap-0 overflow-x-hidden overflow-y-auto sm:max-w-lg"

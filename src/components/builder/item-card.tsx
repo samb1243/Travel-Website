@@ -37,7 +37,7 @@ export function ItemCard({
     <div className={cn("rounded-xl border bg-card", showStatus && status && cn("border-l-[5px]", status.border))}>
       <Tappable
         onClick={onEdit}
-        label={`Edit ${item.title}`}
+        label="Edit"
         className="flex w-full items-start gap-2.5 rounded-xl p-3"
         interactiveClassName="hover:bg-accent/40"
       >

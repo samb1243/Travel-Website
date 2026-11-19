@@ -23,9 +23,11 @@ export function AccountMenu({ user }: { user: { name: string; email: string; ima
     <DropdownMenu>
       <DropdownMenuTrigger
         className="grid size-10 place-items-center rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        aria-label="Account menu"
       >
-        <UserAvatar name={user.name} image={user.image} />
+        <span aria-hidden>
+          <UserAvatar name={user.name} image={user.image} />
+        </span>
+        <span className="sr-only">Account menu for {user.name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">

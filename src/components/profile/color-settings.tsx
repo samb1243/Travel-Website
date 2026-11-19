@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { RotateCcwIcon } from "lucide-react";
+import { CheckIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { COLOR_LABELS, COLOR_SECTIONS, customColorsCss, DEFAULT_COLORS, textOn, type ColorKey, type CustomColors } from "@/lib/colors";
 import { saveColors } from "@/server/actions/profile";
@@ -69,11 +69,12 @@ export function ColorSettings({ saved }: { saved: CustomColors }) {
               <li key={key}>
                 <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-background px-3 has-focus-visible:ring-3 has-focus-visible:ring-ring/50">
                   <span
-                    className="grid size-7 shrink-0 place-items-center rounded-md text-xs font-bold ring-1 ring-black/10"
+                    className="grid size-7 shrink-0 place-items-center rounded-md ring-1 ring-black/10"
                     style={{ background: value(key), color: textOn(value(key)) }}
                     aria-hidden
                   >
-                    Aa
+                    {/* Sample of a filled status circle: an icon, so any colour reads at 3:1 */}
+                    <CheckIcon className="size-4" strokeWidth={3} />
                   </span>
                   <span className="min-w-0 flex-1 text-sm font-medium">{COLOR_LABELS[key]}</span>
                   <input
