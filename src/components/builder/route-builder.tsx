@@ -59,6 +59,7 @@ import { deleteStop, reorderStops } from "@/server/actions/builder";
 import type { BuilderItem, BuilderStop } from "@/server/trips";
 import { ItemCard } from "./item-card";
 import { EmailImport } from "@/components/builder/email-import";
+import { StopIdeas } from "@/components/builder/stop-ideas";
 import { ItemSheet, type ItemSheetState } from "./item-sheet";
 import { StopSheet, type StopSheetState } from "./stop-sheet";
 
@@ -181,6 +182,8 @@ export function RouteBuilder({
                     onAddItem={() => setItemSheet({ mode: "add", stopId: stop.id, defaultDate: stop.arriveOn ?? "" })}
                     onEditItem={(item) => setItemSheet({ mode: "edit", item })}
                     groups={groups}
+                    tripId={tripId}
+                    stopOptions={stopOptions}
                   />
                 ))}
               </ol>
@@ -240,6 +243,8 @@ function SortableStop({
   onAddItem,
   onEditItem,
   groups,
+  tripId,
+  stopOptions,
 }: {
   stop: BuilderStop;
   index: number;
@@ -252,6 +257,8 @@ function SortableStop({
   onEditItem: (item: BuilderItem) => void;
   /** Kinds of item to show; empty = all */
   groups: ItemGroup[];
+  tripId: string;
+  stopOptions: Pick<BuilderStop, "id" | "name">[];
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: stop.id,
@@ -346,6 +353,7 @@ function SortableStop({
           <Button variant="ghost" className="h-11 w-full justify-start rounded-xl font-semibold text-muted-foreground" onClick={onAddItem}>
             <PlusIcon aria-hidden /> Add flight, stay, transport or activity
           </Button>
+          <StopIdeas stop={stop} currency={currency} stops={stopOptions} tripId={tripId} />
         </div>
       </div>
     </li>

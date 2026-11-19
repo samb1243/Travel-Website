@@ -84,6 +84,11 @@ export const SEED_USERS: SeedUser[] = [
   { name: "Maya Chen", email: "maya@example.com", homeCurrency: "USD" },
   { name: "Lukas Weber", email: "lukas@example.com", homeCurrency: "EUR" },
   { name: "Sophie Martin", email: "sophie@example.com", homeCurrency: "EUR" },
+  // Three more travellers with short public Thailand trips that overlap, so
+  // "Ideas from other travellers" has something to show (it needs 3 people)
+  { name: "Aiko Tanaka", email: "aiko@example.com", homeCurrency: "USD" },
+  { name: "Ben Carter", email: "ben@example.com", homeCurrency: "GBP" },
+  { name: "Priya Shah", email: "priya@example.com", homeCurrency: "EUR" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1299,4 +1304,133 @@ const privateDraft: SeedTrip = {
   ],
 };
 
-export const SEED_TRIPS: SeedTrip[] = [southeastAsia, europeRail, tmb, privateDraft];
+
+// ---------------------------------------------------------------------------
+// 5–7. Three short public Thailand trips by different travellers. They share
+// some plans (the same hostel, cooking class, night train...), which is what
+// "Ideas from other travellers" picks up on Maya's trip. Elephant Nature Park
+// is in only two of them, so it stays hidden (the rule is 3 travellers).
+// ---------------------------------------------------------------------------
+const bangkok = { name: "Bangkok", country: "Thailand", countryCode: "TH", lat: 13.7563, lng: 100.5018 };
+const chiangMai = { name: "Chiang Mai", country: "Thailand", countryCode: "TH", lat: 18.7883, lng: 98.9853 };
+const pai = { name: "Pai", country: "Thailand", countryCode: "TH", lat: 19.3591, lng: 98.4403 };
+const lubD = "4 Decho Rd, Silom, Bangkok";
+const greenTiger = "10 Sinharat Rd, Chiang Mai";
+
+const aikoThailand: SeedTrip = {
+  ownerEmail: "aiko@example.com",
+  slugSuffix: "aiko-bkk-cnx",
+  title: "Ten days in Bangkok and Chiang Mai",
+  types: ["CITY_BREAK", "BACKPACKING"],
+  visibility: "PUBLIC",
+  description: "First time in Thailand: temples, street food and the night train north.",
+  startDate: "2026-12-02",
+  endDate: "2026-12-11",
+  currency: "USD",
+  travellers: 1,
+  stops: [
+    {
+      ...bangkok,
+      days: [0, 4],
+      items: [
+        { category: "ACCOMMODATION", title: "Lub d Bangkok Silom", provider: "Hostelworld", start: [0, "14:00"], end: [4, "11:00"], cost: 4400, currency: "THB", status: "BOOKED", payment: "PAID", address: lubD },
+        { category: "ACTIVITY", title: "Grand Palace & Wat Pho", start: [1, "08:30"], cost: 700, currency: "THB", status: "NOT_NEEDED", payment: "PAY_ON_ARRIVAL" },
+        { category: "FOOD", title: "Chinatown street food (Yaowarat)", start: [1, "19:00"], cost: 400, currency: "THB", status: "NOT_NEEDED" },
+        { category: "TRANSPORT", title: "Night train to Chiang Mai", provider: "State Railway of Thailand", from: "Bangkok Krung Thep Aphiwat", to: "Chiang Mai", start: [4, "18:40"], end: [5, "07:15"], cost: 1450, currency: "THB", status: "BOOKED", payment: "PAID" },
+      ],
+    },
+    {
+      ...chiangMai,
+      days: [5, 9],
+      items: [
+        { category: "ACCOMMODATION", title: "Green Tiger House", provider: "Booking.com", start: [5, "14:00"], end: [9, "11:00"], cost: 4800, currency: "THB", status: "BOOKED", payment: "PAY_ON_ARRIVAL", address: greenTiger },
+        { category: "ACTIVITY", title: "Thai cooking class", start: [6, "09:00"], cost: 1100, currency: "THB", status: "BOOKED", payment: "PAID" },
+        { category: "ACTIVITY", title: "Sunset at Doi Suthep", start: [7, "16:30"], cost: 300, currency: "THB", status: "NOT_NEEDED" },
+        { category: "ACTIVITY", title: "Elephant Nature Park", start: [8], cost: 2500, currency: "THB", status: "BOOKED", payment: "PAID" },
+      ],
+    },
+  ],
+};
+
+const benThailand: SeedTrip = {
+  ownerEmail: "ben@example.com",
+  slugSuffix: "ben-bkk-cnx-pai",
+  title: "Bangkok, Chiang Mai & Pai for two",
+  types: ["BACKPACKING", "MULTI_CITY"],
+  visibility: "PUBLIC",
+  description: "Twelve days, two of us, north by train and minivan.",
+  startDate: "2027-03-05",
+  endDate: "2027-03-16",
+  currency: "GBP",
+  travellers: 2,
+  stops: [
+    {
+      ...bangkok,
+      days: [0, 2],
+      items: [
+        { category: "ACCOMMODATION", title: "Lub d Bangkok Silom (2 nights)", provider: "Booking.com", start: [0, "14:00"], end: [2, "11:00"], cost: 3000, currency: "THB", status: "BOOKED", payment: "PAID", address: lubD },
+        { category: "ACTIVITY", title: "Grand Palace and Wat Pho", start: [1, "09:00"], cost: 1400, currency: "THB", status: "NOT_NEEDED", payment: "PAY_ON_ARRIVAL" },
+        { category: "FOOD", title: "Chinatown street food", start: [1, "19:30"], cost: 900, currency: "THB", status: "NOT_NEEDED" },
+        { category: "TRANSPORT", title: "Night train to Chiang Mai", provider: "State Railway of Thailand", from: "Bangkok Krung Thep Aphiwat", to: "Chiang Mai", start: [2, "18:40"], end: [3, "07:15"], cost: 2900, currency: "THB", status: "BOOKED", payment: "PAID" },
+      ],
+    },
+    {
+      ...chiangMai,
+      days: [3, 7],
+      items: [
+        { category: "ACCOMMODATION", title: "Green Tiger House", provider: "Booking.com", start: [3, "14:00"], end: [7, "11:00"], cost: 5200, currency: "THB", status: "BOOKED", payment: "PAID", address: greenTiger },
+        { category: "ACTIVITY", title: "Thai Cooking Class (morning)", start: [4, "09:00"], cost: 2200, currency: "THB", status: "BOOKED", payment: "PAID" },
+        { category: "ACTIVITY", title: "Sunset at Doi Suthep", start: [5, "16:30"], cost: 600, currency: "THB", status: "NOT_NEEDED" },
+        { category: "ACTIVITY", title: "Elephant Nature Park", start: [6], cost: 5000, currency: "THB", status: "BOOKED", payment: "PAID" },
+        { category: "TRANSPORT", title: "Minivan Chiang Mai → Pai", from: "Chiang Mai Arcade", to: "Pai", start: [7, "10:30"], cost: 500, currency: "THB", status: "BOOKED", payment: "PAY_ON_ARRIVAL" },
+      ],
+    },
+    {
+      ...pai,
+      days: [7, 11],
+      items: [{ category: "ACTIVITY", title: "Pai Canyon at sunset", start: [8, "17:30"], status: "NOT_NEEDED" }],
+    },
+  ],
+};
+
+const priyaThailand: SeedTrip = {
+  ownerEmail: "priya@example.com",
+  slugSuffix: "priya-thai-budget",
+  title: "Thailand on a budget: Bangkok to the north",
+  types: ["BACKPACKING"],
+  visibility: "PUBLIC",
+  description: "Hostels, night trains and a lot of khao soi, on about €40 a day.",
+  startDate: "2027-01-10",
+  endDate: "2027-01-22",
+  currency: "EUR",
+  travellers: 1,
+  stops: [
+    {
+      ...bangkok,
+      days: [0, 3],
+      items: [
+        { category: "ACCOMMODATION", title: "Lub d Bangkok Silom", provider: "Hostelworld", start: [0, "14:00"], end: [3, "11:00"], cost: 3900, currency: "THB", status: "BOOKED", payment: "PAID", address: lubD },
+        { category: "ACTIVITY", title: "Grand palace & Wat Pho (go early)", start: [1, "08:00"], cost: 700, currency: "THB", status: "NOT_NEEDED", payment: "PAY_ON_ARRIVAL" },
+        { category: "FOOD", title: "Chinatown street food (Yaowarat)", start: [2, "19:00"], cost: 350, currency: "THB", status: "NOT_NEEDED" },
+        { category: "TRANSPORT", title: "Night train to Chiang Mai", provider: "State Railway of Thailand", from: "Bangkok Krung Thep Aphiwat", to: "Chiang Mai", start: [3, "18:40"], end: [4, "07:15"], cost: 1450, currency: "THB", status: "BOOKED", payment: "PAID" },
+      ],
+    },
+    {
+      ...chiangMai,
+      days: [4, 8],
+      items: [
+        { category: "ACCOMMODATION", title: "Green Tiger House", provider: "Booking.com", start: [4, "14:00"], end: [8, "11:00"], cost: 4600, currency: "THB", status: "BOOKED", payment: "PAY_ON_ARRIVAL", address: greenTiger },
+        { category: "ACTIVITY", title: "Thai cooking class", start: [5, "09:00"], cost: 1000, currency: "THB", status: "BOOKED", payment: "PAID" },
+        { category: "ACTIVITY", title: "Sunset at Doi Suthep", start: [6, "16:30"], cost: 300, currency: "THB", status: "NOT_NEEDED" },
+        { category: "TRANSPORT", title: "Minivan Chiang Mai → Pai", from: "Chiang Mai Arcade", to: "Pai", start: [8, "10:30"], cost: 250, currency: "THB", status: "BOOKED", payment: "PAY_ON_ARRIVAL" },
+      ],
+    },
+    {
+      ...pai,
+      days: [8, 12],
+      items: [{ category: "ACTIVITY", title: "Pai Canyon at sunset", start: [9, "17:30"], status: "NOT_NEEDED" }],
+    },
+  ],
+};
+
+export const SEED_TRIPS: SeedTrip[] = [southeastAsia, europeRail, tmb, privateDraft, aikoThailand, benThailand, priyaThailand];

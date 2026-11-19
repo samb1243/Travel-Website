@@ -64,6 +64,9 @@ run when `NODE_ENV=production`, because the demo password is published here.
 | Two weeks by train: Amsterdam to Budapest  | lukas@example.com    | public     | rail pass, 2 travellers, 5 countries          |
 | Tour du Mont Blanc: 8 stages, 3 countries  | sophie@example.com   | public     | hut-to-hut hiking stages, gear, cash-only huts|
 | Japan in cherry blossom season (draft)     | maya@example.com     | **private**| must never appear in Explore or share links   |
+| Ten days in Bangkok and Chiang Mai         | aiko@example.com     | public     | overlaps with the next two, for Ideas         |
+| Bangkok, Chiang Mai & Pai for two          | ben@example.com      | public     | ideas: shared hostel, class, night train      |
+| Thailand on a budget: Bangkok to the north | priya@example.com    | public     | no Elephant Park, so that idea stays hidden   |
 
 Some items contain confirmation codes, private notes and "confirmation" links. These are
 personal and never appear on shared pages or in copies.
@@ -170,6 +173,26 @@ Signing in with Google using the same email as an existing password account link
   and its reference. **Check & add** opens the normal item form, filled in, to check and
   change before saving; nothing is saved until you do. Dates and times are the local times
   in the email, and anything that isn't a valid date, time or known currency is left blank.
+
+### Ideas from other travellers
+
+Under each stop, **Ideas from other travellers** lists what other people stayed at, ate or did
+there, from public trips through the same place (same OpenStreetMap place, or the same name
+and country).
+
+- An idea only shows once **at least 3 different travellers** have it in a public trip (one
+  vote per person, however many trips), so nothing points back to one person's plans. Names
+  that differ only by case, "&"/"and", punctuation or a note in brackets count as the same.
+- Only public trips count: never private or link-only ones, never your own, and never trips you
+  plan with others. Only what public trip pages already show is used (name, kind, provider,
+  address, price); never notes, confirmations, dates or who planned it.
+- Each idea shows how many travellers have it, the usual provider and address, and a typical
+  price (the median, in your trip's currency: per night for stays, per person otherwise) when
+  at least two of them priced it. Ideas already in your plans for that stop are marked.
+- **Add** opens the normal item form filled in with the place (as "To book"), for you to set
+  your own dates and price. Ideas are loaded only when you open them.
+- In the demo data, Maya's Bangkok and Chiang Mai stops have ideas from Aiko's, Ben's and
+  Priya's trips; Pai has none yet (only two of them went).
 
 ### Itinerary
 
@@ -350,7 +373,7 @@ private trips") are enforced, and where.
 
 **Permissions: users can only edit their own trips**
 - Every server action is a public HTTP endpoint, so each one checks the caller itself before
-  touching data, whatever the UI sends (`src/server/actions/*`). There are 27, and nothing else
+  touching data, whatever the UI sends (`src/server/actions/*`). There are 28, and nothing else
   is exported from those files (anything exported from a `"use server"` file becomes callable).
 - Access checks live in one place, `src/server/permissions.ts`: `requireTripEditor`,
   `requireStopEditor` and `requireItemEditor` allow the owner and members; `requireTripOwner`
@@ -447,9 +470,6 @@ database name must end in `_test` or the tests refuse to start.
 
 The code leaves room for each of these:
 
-- **Recommendations:** stops store a stable OpenStreetMap place id (`Stop.placeId`) so trips
-  through the same place can be matched; add a recommendations service behind a small
-  interface, like place search in `src/server/geocode.ts`.
 - **Forward booking emails** to a personal address instead of pasting them: needs an inbound
   email service (e.g. Postmark) once hosted; it would feed `readBookingEmail` in
   `src/server/actions/email-import.ts`.
